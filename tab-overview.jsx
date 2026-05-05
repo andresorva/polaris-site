@@ -1,0 +1,333 @@
+/* ============================================
+   POLARIS — Dashboard: Overview Tab
+   ============================================ */
+
+function PageHeader({ politician, title, sub, actions }) {
+  return (
+    <div style={{
+      padding: '20px 28px',
+      borderBottom: '1px solid var(--line-1)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 16,
+      background: 'var(--bg-0)',
+    }}>
+      <div className="flex items-c gap-4">
+        <Avatar initials={politician.initials} size={48} gradient={`linear-gradient(135deg, ${politician.color}, ${politician.color}aa)`} />
+        <div>
+          <div className="flex items-c gap-2" style={{ marginBottom: 2 }}>
+            <h1 className="display" style={{ fontSize: 22, fontWeight: 500, letterSpacing: '-0.02em', margin: 0 }}>{title}</h1>
+            <span className="pill"><span className="dot live" /> En vivo</span>
+          </div>
+          <div className="t-3" style={{ fontSize: 12 }}>{sub}</div>
+        </div>
+      </div>
+      <div className="flex items-c gap-2">{actions}</div>
+    </div>
+  );
+}
+
+function TimeRangeSelector({ value, onChange }) {
+  const opts = ['1h', '24h', '7d', '30d', '90d', 'YTD'];
+  return (
+    <div className="flex items-c gap-1" style={{ padding: 3, background: 'var(--bg-2)', border: '1px solid var(--line-1)', borderRadius: 999 }}>
+      {opts.map(o => (
+        <button key={o} onClick={() => onChange(o)} className="mono" style={{
+          padding: '5px 12px', borderRadius: 999, fontSize: 11, fontWeight: 500, letterSpacing: '0.04em',
+          color: value === o ? 'var(--text-1)' : 'var(--text-3)',
+          background: value === o ? 'var(--bg-3)' : 'transparent',
+        }}>{o}</button>
+      ))}
+    </div>
+  );
+}
+
+function OverviewTab({ politician, setTab }) {
+  const [range, setRange] = React.useState('30d');
+  const series = React.useMemo(() => genSentimentSeries(politician.id.charCodeAt(0), politician.sentiment, 8, 30), [politician]);
+  const seriesShort = React.useMemo(() => series.slice(-7).map(d => d.total), [series]);
+  const sparkA = [62,58,61,55,68,72,69,74,78,75,80,84];
+  const sparkB = [12,14,16,15,18,22,28,32,38,42,48,52];
+  const sparkC = [4.1,4.2,4.0,4.3,4.5,4.4,4.6,4.8,5.0,4.9,5.1,5.2];
+
+  return (
+    <div className="fade-in">
+      <PageHeader
+        politician={politician}
+        title={politician.name}
+        sub={`${politician.role} · ${politician.party} · ${politician.region} · Última actualización ${politician.lastActive}`}
+        actions={
+          <>
+            <TimeRangeSelector value={range} onChange={setRange} />
+            <button className="btn btn-sm"><Icon name="filter" size={13} /> Filtros</button>
+            <button className="btn btn-sm"><Icon name="download" size={13} /> Exportar</button>
+            <button className="btn btn-primary btn-sm"><Icon name="zap" size={13} /> Crear alerta</button>
+          </>
+        }
+      />
+
+      <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* KPIs */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+          <KPI label="SENTIMIENTO" value={politician.sentiment} sub="/100" delta={politician.trendDelta}
+               sparkData={sparkA} accent="#2EE6C8" />
+          <KPI label="MENCIONES 24H" value={politician.mentions} delta={24.8}
+               sparkData={sparkB} accent="#4D7CFF" />
+          <KPI label="ALCANCE ESTIMADO" value="4.2M" delta={8.1}
+               sparkData={sparkC} accent="#A78BFA" />
+          <KPI label="SHARE OF VOICE" value="38" sub="%" delta={6.2}
+               sparkData={[28,30,32,34,33,36,38,37,39,38,40,38]} accent="#FFB546" />
+        </div>
+
+        {/* Main grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
+          {/* Sentiment chart */}
+          <div className="card card-pad">
+            <div className="section-h">
+              <div>
+                <h3>Sentimiento en el tiempo</h3>
+                <div className="t-3" style={{ fontSize: 12 }}>Distribución diaria · positivo / neutral / negativo</div>
+              </div>
+              <div className="flex gap-3">
+                <span className="flex items-c gap-2 mono" style={{ fontSize: 11 }}><span className="dot" style={{ background: '#2EE6C8' }} /> Positivo</span>
+                <span className="flex items-c gap-2 mono" style={{ fontSize: 11 }}><span className="dot" style={{ background: '#6B7794' }} /> Neutral</span>
+                <span className="flex items-c gap-2 mono" style={{ fontSize: 11 }}><span className="dot" style={{ background: '#FF4D6D' }} /> Negativo</span>
+              </div>
+            </div>
+            <AreaChart data={series} height={240} />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--line-1)' }}>
+              {[
+                ['Pico positivo', '18 oct', '+184% vs media', '#2EE6C8'],
+                ['Pico negativo', '12 oct', '+92% vs media', '#FF4D6D'],
+                ['Volatilidad', 'Moderada', 'σ = 8.4 puntos', '#FFB546'],
+              ].map((s, i) => (
+                <div key={i}>
+                  <div className="mono t-3" style={{ fontSize: 9, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{s[0]}</div>
+                  <div className="display" style={{ fontSize: 16, fontWeight: 500, marginTop: 4, color: s[3] }}>{s[1]}</div>
+                  <div className="t-3" style={{ fontSize: 11, marginTop: 2 }}>{s[2]}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Sentiment composition donut */}
+          <div className="card card-pad">
+            <div className="section-h">
+              <h3>Composición</h3>
+              <span className="mono t-3" style={{ fontSize: 11 }}>últimas 24h</span>
+            </div>
+            <div className="flex center" style={{ padding: '8px 0 12px' }}>
+              <div style={{ position: 'relative' }}>
+                <Donut value={politician.sentiment} size={160} stroke={14} color="#2EE6C8" label={politician.sentiment} sublabel="POS · NEU · NEG" />
+              </div>
+            </div>
+            <div className="flex col gap-3" style={{ marginTop: 8 }}>
+              {[
+                ['Positivo', 62, '#2EE6C8', '88K'],
+                ['Neutral', 24, '#6B7794', '34K'],
+                ['Negativo', 14, '#FF4D6D', '20K'],
+              ].map(([label, val, color, count]) => (
+                <div key={label}>
+                  <div className="flex between items-c" style={{ marginBottom: 6, fontSize: 12 }}>
+                    <span className="flex items-c gap-2"><span className="dot" style={{ background: color }} />{label}</span>
+                    <span className="mono t-3">{count} · {val}%</span>
+                  </div>
+                  <HBar value={val} color={color} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Row 2: Live feed + Intelligence */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16 }}>
+          {/* Live feed */}
+          <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+            <div className="flex between items-c" style={{ padding: '16px 20px', borderBottom: '1px solid var(--line-1)' }}>
+              <div>
+                <div className="display" style={{ fontSize: 15, fontWeight: 500 }}>Stream multiplataforma</div>
+                <div className="t-3" style={{ fontSize: 11 }}>Filtros: todos · idioma:es · ordenado por relevancia</div>
+              </div>
+              <div className="flex items-c gap-2">
+                <button className="btn btn-sm btn-ghost"><Icon name="pause" size={12} /> Pausar</button>
+                <button className="btn btn-sm btn-ghost" onClick={() => setTab('mentions')}>Ver todo <Icon name="arrow-r" size={12} /></button>
+              </div>
+            </div>
+            <div style={{ padding: '4px 0' }}>
+              {FEED_ITEMS.slice(0, 5).map((f, i) => <FeedRow key={f.id} f={f} delay={i * 60} />)}
+            </div>
+            <div className="flex items-c gap-2" style={{ padding: '12px 20px', borderTop: '1px solid var(--line-1)', justifyContent: 'center' }}>
+              <span className="dot live" /><span className="mono t-3" style={{ fontSize: 11 }}>Recibiendo nuevas menciones cada ~12 segundos</span>
+            </div>
+          </div>
+
+          {/* Intelligence panel */}
+          <div className="flex col gap-4">
+            {/* AI insights */}
+            <div className="card" style={{ position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(167,139,250,0.06), transparent 60%)', pointerEvents: 'none' }} />
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--line-1)', position: 'relative' }}>
+                <div className="flex items-c gap-2">
+                  <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--purple)' }}>
+                    <Icon name="spark" size={14} />
+                  </div>
+                  <div className="grow">
+                    <div className="display" style={{ fontSize: 14, fontWeight: 500 }}>Inteligencia POLARIS</div>
+                    <div className="mono t-3" style={{ fontSize: 10, letterSpacing: '0.06em' }}>generado hace 4 minutos</div>
+                  </div>
+                  <span className="pill purple">AI</span>
+                </div>
+              </div>
+              <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14, position: 'relative' }}>
+                {[
+                  { icon: 'arrow-up', color: 'var(--pos)', text: <>El cabildo de <b>Maracaibo</b> está generando un repunte de <b className="t-pos">+184%</b> en menciones positivas en Zulia.</> },
+                  { icon: 'warning', color: 'var(--warn)', text: <>Detectado patrón coordinado en 12 cuentas afiliadas a red oficialista. <b>Inicio: hace 6h, ventana 04:00-06:00.</b></> },
+                  { icon: 'zap', color: 'var(--blue)', text: <>El hashtag <span className="mono">#VenezuelaLibre</span> alcanzó <b>284K usos en TikTok</b>. Demografía dominante: 18-24 años urbanos.</> },
+                ].map((ins, i) => (
+                  <div key={i} className="flex items-s gap-3">
+                    <div style={{ marginTop: 1, width: 18, height: 18, borderRadius: 999, background: 'var(--bg-3)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: ins.color, flexShrink: 0 }}>
+                      <Icon name={ins.icon} size={11} strokeWidth={2} />
+                    </div>
+                    <div className="t-2" style={{ fontSize: 12.5, lineHeight: 1.5 }}>{ins.text}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Top topics */}
+            <div className="card card-pad">
+              <div className="section-h">
+                <h3>Temas dominantes</h3>
+                <span className="mono t-3" style={{ fontSize: 11 }}>top 6</span>
+              </div>
+              <div className="flex col gap-2">
+                {TOPICS.map((t, i) => (
+                  <div key={t.name} className="flex items-c gap-3" style={{ padding: '8px 0', borderBottom: i === TOPICS.length - 1 ? 'none' : '1px solid var(--line-1)' }}>
+                    <span className="mono t-3" style={{ fontSize: 10, width: 18 }}>{String(i + 1).padStart(2, '0')}</span>
+                    <div className="grow" style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-1)' }}>{t.name}</div>
+                      <div className="t-3 mono" style={{ fontSize: 10 }}>{(t.mentions / 1000).toFixed(1)}K menciones · sent {t.sentiment}</div>
+                    </div>
+                    <Trend value={t.delta} suffix="%" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Row 3: Geo + Activity heatmap */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div className="card card-pad">
+            <div className="section-h">
+              <h3>Distribución geográfica</h3>
+              <span className="mono t-3" style={{ fontSize: 11 }}>menciones por estado · 24h</span>
+            </div>
+            <div className="flex col gap-3">
+              {[
+                ['Distrito Capital', 38400, 72, '#2EE6C8'],
+                ['Zulia', 28200, 78, '#2EE6C8'],
+                ['Miranda', 18900, 64, '#FFB546'],
+                ['Carabobo', 12400, 58, '#FFB546'],
+                ['Lara', 8800, 52, '#FFB546'],
+                ['Anzoátegui', 6200, 48, '#FF4D6D'],
+                ['Otros (19)', 22400, 61, '#6B7794'],
+              ].map(([name, v, sent, c]) => {
+                const max = 38400;
+                return (
+                  <div key={name}>
+                    <div className="flex between items-c" style={{ fontSize: 12, marginBottom: 5 }}>
+                      <span style={{ fontWeight: 500 }}>{name}</span>
+                      <span className="mono t-3">{(v/1000).toFixed(1)}K · sent {sent}</span>
+                    </div>
+                    <HBar value={(v/max)*100} color={c} height={5} />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="card card-pad">
+            <div className="section-h">
+              <h3>Actividad por hora · día</h3>
+              <span className="mono t-3" style={{ fontSize: 11 }}>últimos 7 días · 24h</span>
+            </div>
+            <Heatmap rows={7} cols={24} />
+            <div className="flex between items-c" style={{ marginTop: 16 }}>
+              <div className="t-3 mono" style={{ fontSize: 10, letterSpacing: '0.06em' }}>00h ················································ 23h</div>
+              <div className="flex items-c gap-2 mono t-3" style={{ fontSize: 10 }}>
+                <span>menos</span>
+                {[0.15, 0.35, 0.55, 0.75, 0.95].map(v => (
+                  <span key={v} style={{ width: 12, height: 12, borderRadius: 3, background: `rgba(46,230,200,${v})` }} />
+                ))}
+                <span>más</span>
+              </div>
+            </div>
+            <div style={{ padding: 12, marginTop: 16, background: 'var(--bg-1)', borderRadius: 8, border: '1px solid var(--line-1)' }}>
+              <div className="flex items-c gap-2">
+                <Icon name="info" size={13} style={{ color: 'var(--blue)' }} />
+                <span className="t-2" style={{ fontSize: 12 }}>Pico recurrente entre <b>19:00-22:00</b>. Mejor ventana para publicar contenido.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FeedRow({ f, delay = 0 }) {
+  const sentColor = f.sentiment === 'pos' ? '#2EE6C8' : f.sentiment === 'neg' ? '#FF4D6D' : '#6B7794';
+  return (
+    <div className="flex items-s gap-3" style={{
+      padding: '14px 20px',
+      borderBottom: '1px solid var(--line-1)',
+      animation: `pageIn 400ms var(--ease-out) ${delay}ms both`,
+      transition: 'background 120ms var(--ease)',
+      cursor: 'pointer',
+    }}
+    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-1)'}
+    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+      <div style={{ position: 'relative', flexShrink: 0 }}>
+        <Avatar initials={f.avatar} size={34} />
+        <div style={{ position: 'absolute', bottom: -2, right: -2, width: 16, height: 16, borderRadius: 5, background: 'var(--bg-2)', border: '1px solid var(--line-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name={f.platform === 'X' ? 'logo-x' : f.platform === 'TikTok' ? 'logo-tt' : f.platform === 'Instagram' ? 'logo-ig' : f.platform === 'Facebook' ? 'logo-fb' : 'logo-x'} size={9} />
+        </div>
+      </div>
+      <div className="grow" style={{ minWidth: 0 }}>
+        <div className="flex items-c gap-2 wrap" style={{ marginBottom: 3 }}>
+          <span style={{ fontSize: 13, fontWeight: 600 }}>{f.handle}</span>
+          <span className="mono t-3" style={{ fontSize: 11 }}>{f.user}</span>
+          <span className="t-4">·</span>
+          <span className="t-3" style={{ fontSize: 11 }}>{f.time}</span>
+          {f.flags.includes('verified') && <span className="pill blue" style={{ padding: '1px 6px', fontSize: 9 }}>✓ verificado</span>}
+          {f.flags.includes('viral') && <span className="pill amber" style={{ padding: '1px 6px', fontSize: 9 }}>VIRAL</span>}
+          {f.flags.includes('suspicious') && <span className="pill coral" style={{ padding: '1px 6px', fontSize: 9 }}>SOSPECHOSO</span>}
+          {f.flags.includes('coordinated') && <span className="pill purple" style={{ padding: '1px 6px', fontSize: 9 }}>COORD</span>}
+        </div>
+        <div className="t-1" style={{ fontSize: 13, lineHeight: 1.5 }}>{f.content}</div>
+        <div className="flex items-c gap-4" style={{ marginTop: 8 }}>
+          <span className="flex items-c gap-1 t-3 mono" style={{ fontSize: 11 }}><Icon name="heart" size={11} /> {(f.engagement.likes / 1000).toFixed(1)}K</span>
+          <span className="flex items-c gap-1 t-3 mono" style={{ fontSize: 11 }}><Icon name="reply" size={11} /> {f.engagement.replies}</span>
+          <span className="flex items-c gap-1 t-3 mono" style={{ fontSize: 11 }}><Icon name="share" size={11} /> {(f.engagement.shares / 1000).toFixed(1)}K</span>
+          <span className="flex items-c gap-1 t-3 mono" style={{ fontSize: 11 }}><Icon name="eye" size={11} /> {f.reach}</span>
+        </div>
+      </div>
+      <div className="flex col items-c gap-2" style={{ flexShrink: 0 }}>
+        <div className="mono" style={{
+          fontSize: 11, padding: '3px 8px', borderRadius: 6, fontWeight: 500,
+          color: sentColor,
+          background: `${sentColor}15`,
+          border: `1px solid ${sentColor}40`,
+        }}>{f.score > 0 ? '+' : ''}{f.score.toFixed(2)}</div>
+        <button className="btn btn-icon btn-sm btn-ghost"><Icon name="dots" size={14} /></button>
+      </div>
+    </div>
+  );
+}
+
+window.OverviewTab = OverviewTab;
+window.FeedRow = FeedRow;
+window.PageHeader = PageHeader;
+window.TimeRangeSelector = TimeRangeSelector;

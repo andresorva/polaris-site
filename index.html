@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>POLARIS · Plataforma de Inteligencia Política</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="styles.css" />
+
+  <template id="__bundler_thumbnail">
+    <svg viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
+      <rect width="600" height="400" fill="#0A0E1A"/>
+      <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#2EE6C8"/><stop offset="100%" stop-color="#4D7CFF"/></linearGradient></defs>
+      <path d="M300 100 L330 200 L420 220 L330 240 L300 340 L270 240 L180 220 L270 200 Z" fill="url(#g)"/>
+      <circle cx="300" cy="220" r="22" fill="#0A0E1A"/>
+      <circle cx="300" cy="220" r="9" fill="#2EE6C8"/>
+    </svg>
+  </template>
+</head>
+<body>
+  <!-- Global atmosphere (datanaat-style): grid + mesh blobs + cursor halo -->
+  <div class="atmos-grid" aria-hidden="true"></div>
+  <div class="atmos-mesh" aria-hidden="true"><span></span></div>
+  <div class="atmos-cursor" id="atmosCursor" aria-hidden="true"></div>
+
+  <div id="root"></div>
+
+  <!-- React + Babel (pinned) -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <!-- Data (plain JS) -->
+  <script src="data.js"></script>
+
+  <!-- Components and screens (Babel JSX) -->
+  <script type="text/babel" src="components-shared.jsx"></script>
+  <script type="text/babel" src="screen-landing.jsx"></script>
+  <script type="text/babel" src="screen-login.jsx"></script>
+  <script type="text/babel" src="screen-politicians.jsx"></script>
+  <script type="text/babel" src="tab-overview.jsx"></script>
+  <script type="text/babel" src="tab-sentiment-mentions-critics.jsx"></script>
+  <script type="text/babel" src="tab-alerts-reports-sources.jsx"></script>
+  <script type="text/babel" src="agents-modal.jsx"></script>
+  <script type="text/babel" src="screen-dashboard-shell.jsx"></script>
+
+  <!-- App root -->
+  <script type="text/babel">
+    function App() {
+      const [screen, setScreen] = React.useState('landing');
+      const [politician, setPolitician] = React.useState(POLITICIANS[0]);
+
+      // Floating screen indicator (prototype helper)
+      const screens = [
+        { id: 'landing', label: 'Landing' },
+        { id: 'login', label: 'Login' },
+        { id: 'politicians', label: 'Selector' },
+        { id: 'dashboard', label: 'Dashboard' },
+      ];
+
+      const Page = {
+        landing: LandingPage,
+        login: LoginScreen,
+        politicians: PoliticiansScreen,
+        dashboard: DashboardScreen,
+      }[screen];
+
+      return (
+        <>
+          <Page
+            onNavigate={setScreen}
+            onSelectPolitician={setPolitician}
+            politician={politician}
+          />
+          {/* Prototype navigator */}
+          <div style={{
+            position: 'fixed', bottom: 16, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 1000,
+            padding: 4,
+            background: 'rgba(10,14,26,0.92)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: 999,
+            display: 'flex', alignItems: 'center', gap: 2,
+            boxShadow: '0 12px 32px rgba(0,0,0,0.6)',
+            fontFamily: 'var(--font-mono)',
+          }}>
+            <span style={{ padding: '4px 10px', fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.1em' }}>SCREENS</span>
+            {screens.map((s, i) => (
+              <button key={s.id} onClick={() => setScreen(s.id)} style={{
+                padding: '6px 14px', borderRadius: 999,
+                fontSize: 11, fontWeight: 500, letterSpacing: '0.04em',
+                color: screen === s.id ? '#051410' : 'var(--text-2)',
+                background: screen === s.id ? '#2EE6C8' : 'transparent',
+                cursor: 'pointer', border: 'none',
+                transition: 'all 160ms var(--ease)',
+              }}>
+                <span style={{ opacity: 0.6, marginRight: 6 }}>{String(i+1).padStart(2,'0')}</span>{s.label}
+              </button>
+            ))}
+          </div>
+        </>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+    // Global cursor glow — smoothed RAF tracking
+    (function () {
+      const glow = document.getElementById('atmosCursor');
+      if (!glow) return;
+      let tx = window.innerWidth / 2, ty = window.innerHeight / 2;
+      let cx = tx, cy = ty;
+      let raf = null;
+      const tick = () => {
+        cx += (tx - cx) * 0.12;
+        cy += (ty - cy) * 0.12;
+        glow.style.transform = 'translate(' + (cx - 300) + 'px,' + (cy - 300) + 'px)';
+        glow.style.left = '0';
+        glow.style.top = '0';
+        if (Math.abs(tx - cx) > 0.3 || Math.abs(ty - cy) > 0.3) {
+          raf = requestAnimationFrame(tick);
+        } else {
+          raf = null;
+        }
+      };
+      window.addEventListener('pointermove', (e) => {
+        tx = e.clientX; ty = e.clientY;
+        if (!raf) raf = requestAnimationFrame(tick);
+      }, { passive: true });
+      window.addEventListener('pointerleave', () => { glow.style.opacity = '0.4'; });
+      window.addEventListener('pointerenter', () => { glow.style.opacity = '1'; });
+    })();
+  </script>
+</body>
+</html>
