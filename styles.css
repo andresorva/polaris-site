@@ -582,3 +582,350 @@ a { color: inherit; text-decoration: none; }
 .t-teal { color: var(--teal); }
 .t-blue { color: var(--blue); }
 .t-purple { color: var(--purple); }
+
+/* ============================================
+   MOBILE RESPONSIVE — Día 3 (2026-05-06)
+   Mobile-first overrides para landing + dashboard.
+   Estrategia: usar selectores `[style*="..."]` para
+   atacar los inline gridTemplateColumns hardcoded
+   en los .jsx sin tener que tocar cada componente.
+   Breakpoints: <768px mobile, 769-1024px tablet, >1024 desktop.
+   ============================================ */
+
+/* Helpers utilitarios para mostrar/ocultar por breakpoint */
+.mobile-only { display: none !important; }
+.mobile-tabs-bar { display: none; }
+
+/* Tablet: 2 columnas para grids 3-4 cols */
+@media (max-width: 1024px) {
+  [style*="grid-template-columns: repeat(3"],
+  [style*="grid-template-columns: repeat(4"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  [style*="grid-template-columns: repeat(9"] {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+  /* Hero a 1 col en tablet */
+  [style*="grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr)"] {
+    grid-template-columns: 1fr !important;
+  }
+  aside[style*="width: 220px"] { width: 200px !important; }
+}
+
+/* MOBILE — todos los screens */
+@media (max-width: 768px) {
+  body { font-size: 13px; }
+
+  /* Headers tipográficos con tope móvil */
+  h1.display { font-size: clamp(26px, 7.5vw, 32px) !important; line-height: 1.1 !important; }
+  h2.display { font-size: clamp(22px, 6.5vw, 28px) !important; line-height: 1.15 !important; }
+  .display[style*="fontSize: 56"],
+  .display[style*="fontSize: 64"],
+  .display[style*="fontSize: 44"] { font-size: 28px !important; }
+  .metric-num { font-size: 22px !important; }
+  .metric-num.lg { font-size: 30px !important; }
+  .metric-num.xl { font-size: 36px !important; }
+  p, .t-2 { font-size: 14px !important; line-height: 1.55 !important; }
+
+  /* Atmosphere — quitar cursor halo y achicar mesh para perf y respiración */
+  .atmos-cursor { display: none !important; }
+  .atmos-mesh::before, .atmos-mesh::after, .atmos-mesh span {
+    width: 320px !important; height: 320px !important; filter: blur(80px) !important;
+  }
+
+  /* === Forzar grids inline a 1 columna === */
+  [style*="grid-template-columns: repeat(2"],
+  [style*="grid-template-columns: repeat(3"],
+  [style*="grid-template-columns: repeat(4"],
+  [style*="grid-template-columns: repeat(9"],
+  [style*="grid-template-columns: 1fr 1fr"],
+  [style*="grid-template-columns: 1.4fr 1fr"],
+  [style*="grid-template-columns: 1.5fr 1fr"],
+  [style*="grid-template-columns: 2fr 1fr"],
+  [style*="grid-template-columns: 1fr 280px"],
+  [style*="grid-template-columns: 1fr 320px"],
+  [style*="grid-template-columns: minmax(0"],
+  [style*="grid-template-columns: 1.4fr repeat(4"],
+  [style*="gridTemplateColumns: 'repeat(3, 1fr)'"] {
+    grid-template-columns: 1fr !important;
+  }
+  /* Tablas tipo grid (lista políticos, top críticos, sources) → stack como tarjetas */
+  [style*="grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr 36px"],
+  [style*="grid-template-columns: 36px 2fr 1fr 1fr 1fr 36px"],
+  [style*="grid-template-columns: 36px 2fr 1fr 1fr 1fr 1fr 1.2fr"] {
+    grid-template-columns: 1fr !important;
+    row-gap: 6px !important;
+  }
+  /* Header rows de tablas: ocultar (los datos abajo se muestran apilados) */
+  [style*="grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr 36px"][style*="background: 'var(--bg-1)'"],
+  [style*="grid-template-columns: 36px 2fr 1fr 1fr 1fr 36px"][style*="background: 'var(--bg-1)'"],
+  [style*="grid-template-columns: 36px 2fr 1fr 1fr 1fr 1fr 1.2fr"][style*="background: 'var(--bg-1)'"] {
+    display: none !important;
+  }
+
+  /* Cards y secciones — reducir padding */
+  .card-pad { padding: 14px !important; }
+  .card-pad-sm { padding: 10px 12px !important; }
+  .card[style*="padding: 64"] { padding: 24px !important; }
+
+  /* Secciones de landing: padding lateral 16px y vertical comprimido */
+  section[style*="padding: '120px 40px'"] { padding: 56px 16px !important; }
+  section[style*="padding: '80px 40px'"] { padding: 48px 16px !important; }
+  section[style*="padding: '80px 40px 60px'"] { padding: 48px 16px 32px !important; }
+  section[style*="padding: '80px 40px 40px'"] { padding: 48px 16px 28px !important; }
+
+  /* Landing nav: ocultar menú central, mostrar solo logo + CTA */
+  nav[style*="padding: '18px 40px'"] { padding: 12px 16px !important; }
+  nav[style*="padding: '18px 40px'"] .flex.items-c.gap-6 > a { display: none !important; }
+  nav[style*="padding: '18px 40px'"] .flex.items-c.gap-6 > span[style*="borderLeft"] { display: none !important; }
+  nav[style*="padding: '18px 40px'"] .btn-ghost { display: none !important; }
+
+  /* Hero: ocultar la estrella decorativa para que el texto respire */
+  .hero-star-wrap { display: none !important; }
+  /* Hero buttons row: full width */
+  section[style*="padding: '80px 40px 60px'"] .btn { width: 100% !important; justify-content: center; }
+  section[style*="padding: '80px 40px 60px'"] .flex.items-c.gap-3 { flex-direction: column !important; align-items: stretch !important; }
+
+  /* Hero preview window (dashboard mock): NO mostrar grid interno horizontal */
+  div[style*="grid-template-columns: '1fr 280px'"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Footer columns stack */
+  footer [style*="grid-template-columns: '1.4fr repeat(4, 1fr)'"],
+  footer [style*="grid-template-columns: 1.4fr repeat(4"] {
+    grid-template-columns: 1fr !important;
+    gap: 28px !important;
+  }
+
+  /* === LOGIN SCREEN === */
+  /* Ocultar panel branded izquierdo, mostrar solo form */
+  div[data-screen-label="02 Login"][style*="grid-template-columns: '1fr 1fr'"],
+  div[data-screen-label="02 Login"] {
+    grid-template-columns: 1fr !important;
+  }
+  div[data-screen-label="02 Login"] > div:first-child {
+    display: none !important;
+  }
+  div[data-screen-label="02 Login"] > div:last-child {
+    padding: 24px !important;
+    min-height: 100vh;
+  }
+  div[data-screen-label="02 Login"] input.input { width: 100% !important; }
+
+  /* === POLITICIANS SCREEN === */
+  div[data-screen-label="03 Politicians"] header { padding: 10px 14px !important; }
+  /* Ocultar nombre/rol en navbar móvil — mostrar solo avatar */
+  div[data-screen-label="03 Politicians"] header > div.flex.items-c.gap-3 > div[style*="flexDirection: 'column'"] { display: none !important; }
+  /* Botón "+ añadir" pasa a icono */
+  div[data-screen-label="03 Politicians"] main { padding: 24px 16px 60px !important; }
+  /* Toolbar wrap */
+  div[data-screen-label="03 Politicians"] main .flex.items-c.gap-3.wrap { gap: 8px !important; }
+  /* Filtro regiones: scroll horizontal en mobile */
+  div[data-screen-label="03 Politicians"] main .flex.items-c.gap-1[style*="background: 'var(--bg-2)'"] {
+    overflow-x: auto;
+    max-width: 100%;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  div[data-screen-label="03 Politicians"] main .flex.items-c.gap-1[style*="background: 'var(--bg-2)'"]::-webkit-scrollbar { display: none; }
+  /* Tarjetas: 1 col, full width */
+  button[style*="minHeight: 280"] { min-height: 200px !important; }
+
+  /* === DASHBOARD === */
+  /* Navbar comprimido */
+  div[data-screen-label="04 Dashboard"] > header[style*="padding: '10px 24px'"] {
+    padding: 10px 12px !important;
+    gap: 8px !important;
+  }
+  /* Esconder elementos verbosos del navbar en mobile */
+  div[data-screen-label="04 Dashboard"] > header > div.flex.items-c.gap-4 > div[style*="height: 22"] { display: none !important; }
+  div[data-screen-label="04 Dashboard"] > header > div[style*="flex: '0 1 480px'"] { display: none !important; }
+  div[data-screen-label="04 Dashboard"] > header > div.flex.items-c.gap-4 > .flex.items-c.gap-2 > span:not(button):not([style*="background"]) { display: none !important; }
+  /* Pill EN VIVO compactar */
+  div[data-screen-label="04 Dashboard"] > header .pill.teal { padding: 2px 6px !important; font-size: 9px !important; }
+  /* Mostrar hamburger (mobile-only) */
+  div[data-screen-label="04 Dashboard"] .btn-mobile-menu { display: inline-flex !important; }
+  /* Ocultar share/cog/avatar para hacer espacio */
+  div[data-screen-label="04 Dashboard"] > header > .flex.items-c.gap-2 > button[title="Alertas"] ~ button { display: none !important; }
+  div[data-screen-label="04 Dashboard"] > header > .flex.items-c.gap-2 > div[style*="height: 22"] { display: none !important; }
+  div[data-screen-label="04 Dashboard"] > header > .flex.items-c.gap-2 > .avatar { display: none !important; }
+
+  /* Sidebar como drawer off-canvas */
+  div[data-screen-label="04 Dashboard"] aside {
+    position: fixed !important;
+    top: 0; left: 0; bottom: 0;
+    width: 260px !important;
+    z-index: 60;
+    transform: translateX(-100%);
+    transition: transform 240ms var(--ease);
+    box-shadow: 8px 0 32px rgba(0,0,0,0.6);
+  }
+  body.sidebar-open div[data-screen-label="04 Dashboard"] aside { transform: translateX(0); }
+  body.sidebar-open::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+    z-index: 55;
+    cursor: pointer;
+  }
+
+  /* Mobile tabs bar — visible solo en mobile, scroll horizontal */
+  .mobile-tabs-bar {
+    display: flex !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 4px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line-1);
+    background: rgba(5,7,13,0.95);
+    backdrop-filter: blur(20px);
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    scroll-snap-type: x mandatory;
+    flex-shrink: 0;
+    position: sticky; top: 56px; z-index: 40;
+  }
+  .mobile-tabs-bar::-webkit-scrollbar { display: none; }
+  .mobile-tabs-bar .mobile-tab {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 12px; font-weight: 500;
+    color: var(--text-3);
+    background: transparent;
+    border: 1px solid transparent;
+    scroll-snap-align: start;
+    display: inline-flex; align-items: center; gap: 6px;
+    white-space: nowrap;
+    cursor: pointer;
+    position: relative;
+  }
+  .mobile-tabs-bar .mobile-tab.active {
+    color: var(--text-1);
+    background: var(--bg-3);
+    border-color: var(--teal);
+    box-shadow: 0 0 0 1px var(--teal-glow);
+  }
+  .mobile-tabs-bar .mobile-tab.active::after {
+    content: '';
+    position: absolute;
+    left: 14px; right: 14px; bottom: -2px;
+    height: 2px; background: var(--teal); border-radius: 2px;
+  }
+
+  /* Page header del dashboard (h1 + acciones) */
+  div[style*="padding: '20px 28px'"][style*="borderBottom"] {
+    padding: 12px 14px !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+  }
+  div[style*="padding: '20px 28px'"][style*="borderBottom"] > .flex.items-c.gap-2 {
+    flex-wrap: wrap;
+    width: 100%;
+    gap: 6px !important;
+  }
+  div[style*="padding: '20px 28px'"][style*="borderBottom"] .btn-sm { padding: 6px 10px !important; font-size: 11px; }
+
+  /* Tabs filter pills wrap mejor */
+  .flex.items-c.gap-3.wrap { gap: 8px !important; }
+  .flex.items-c.gap-1[style*="border-radius: 999px"] { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; }
+  .flex.items-c.gap-1[style*="border-radius: 999px"]::-webkit-scrollbar { display: none; }
+
+  /* Padding general del main del dashboard */
+  div[data-screen-label="04 Dashboard"] main > div > div[style*="padding: 24"] {
+    padding: 16px 12px !important;
+    gap: 12px !important;
+  }
+
+  /* Card del feed lateral en mentions tab → stack debajo */
+  /* Cubierto por regla `1fr 320px` */
+
+  /* Pipeline horizontal scroll: stages más compactos */
+  div[style*="minWidth: 130"] { min-width: 110px !important; padding: 10px !important; }
+
+  /* === Network graph height más bajo === */
+  div[style*="height: 260"] svg { height: 200px !important; }
+
+  /* === MODAL DE AGENTES === */
+  div[style*="width: 'min(1280px"] {
+    width: calc(100vw - 16px) !important;
+    margin: 8px !important;
+    max-height: 95vh;
+    overflow-y: auto !important;
+    border-radius: 14px !important;
+  }
+  div[style*="padding: '32px 40px 24px'"] { padding: 20px 16px !important; }
+  div[style*="padding: '40px 40px 24px'"] { padding: 24px 16px !important; }
+  div[style*="padding: '32px 40px 40px'"] { padding: 24px 16px !important; }
+  /* Pipeline de agentes: stack vertical, ocultar SVG conectores (decorativos) */
+  .agents-pipeline-svg { display: none !important; }
+  /* Modal cierre: agrandar botón */
+  div[style*="width: 'min(1280px"] button[aria-label="Cerrar"] {
+    position: sticky !important;
+    top: 8px;
+    width: 44px !important; height: 44px !important;
+  }
+
+  /* Politician card: ajuste de stats grid 1fr 1fr → mantener 2 columnas */
+  /* (Ese sí debe quedar 2 cols porque solo son sentiment+menciones) */
+  button.card.lift [style*="grid-template-columns: '1fr 1fr'"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Inputs full width y con tipo táctil */
+  .input { font-size: 14px; padding: 12px 14px; }
+
+  /* Bottom nav prototype: shrink */
+  div[style*="bottom: 16, left: '50%'"][style*="zIndex: 1000"] {
+    bottom: 8px !important;
+    transform: translateX(-50%) scale(0.78) !important;
+    transform-origin: bottom center;
+  }
+
+  /* Métrica band: número grande baja a 36px */
+  section[style*="padding: '80px 40px'"][style*="background: 'var(--bg-1)'"] .display[style*="fontSize: 64"] {
+    font-size: 32px !important;
+  }
+  /* Stats band en login left panel: ya oculto */
+
+  /* Pricing/contact card en landing: padding 24 */
+  .card[style*="padding: 64"] { padding: 24px !important; }
+
+  /* Banner amarillo "modo demo" — usado en Tarea 3 */
+  .demo-mode-banner {
+    position: sticky; top: 0; z-index: 70;
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+  }
+}
+
+/* === Banner modo demo (todos los breakpoints) === */
+.demo-mode-banner {
+  position: sticky;
+  top: 0;
+  z-index: 70;
+  padding: 10px 16px;
+  background: linear-gradient(90deg, rgba(255,181,70,0.18), rgba(255,181,70,0.10));
+  border-bottom: 1px solid rgba(255,181,70,0.4);
+  color: var(--warn);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-align: center;
+  font-weight: 500;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.demo-mode-banner .dot { background: var(--warn); animation: pulse 1.8s var(--ease) infinite; }
+
+/* === Loading skeleton === */
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-2) 0%, var(--bg-3) 50%, var(--bg-2) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+  border-radius: var(--r-md);
+  display: block;
+}
+
+/* Default: hamburger oculto (visible solo en mobile via media query arriba) */
+.btn-mobile-menu { display: none; }

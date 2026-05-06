@@ -251,7 +251,7 @@ function AgentsPipeline({ activeIdx, setActiveIdx }) {
   return (
     <div style={{ position: 'relative' }}>
       {/* SVG layer for connectors */}
-      <svg style={{
+      <svg className="agents-pipeline-svg" style={{
         position: 'absolute', inset: 0, width: '100%', height: '100%',
         pointerEvents: 'none', zIndex: 1,
       }} viewBox="0 0 1200 720" preserveAspectRatio="none">

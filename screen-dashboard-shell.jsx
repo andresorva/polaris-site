@@ -12,7 +12,20 @@ const TABS = [
   { id: 'sources', label: 'Fuentes', icon: 'plug' },
 ];
 
-function DashboardNavbar({ politician, onNavigate, onSelectPolitician }) {
+// Hook compartido para detectar mobile vs desktop (breakpoint 768)
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = React.useState(
+    typeof window !== 'undefined' ? window.innerWidth <= breakpoint : false,
+  );
+  React.useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= breakpoint);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [breakpoint]);
+  return isMobile;
+}
+
+function DashboardNavbar({ politician, onNavigate, onSelectPolitician, onToggleSidebar }) {
   const [showSwitcher, setShowSwitcher] = React.useState(false);
   return (
     <header style={{
@@ -25,6 +38,15 @@ function DashboardNavbar({ politician, onNavigate, onSelectPolitician }) {
       gap: 16,
     }}>
       <div className="flex items-c gap-4">
+        {/* Hamburger — solo visible en mobile (controlado por CSS) */}
+        <button
+          className="btn btn-icon btn-sm btn-mobile-menu"
+          onClick={onToggleSidebar}
+          aria-label="Abrir menu"
+          title="Abrir menu"
+        >
+          <Icon name="menu" size={18} />
+        </button>
         <PolarisLogo size={20} />
         <div style={{ width: 1, height: 22, background: 'var(--line-2)' }} />
         {/* Workspace breadcrumb */}
@@ -100,7 +122,39 @@ function DashboardNavbar({ politician, onNavigate, onSelectPolitician }) {
   );
 }
 
-function DashboardSidebar({ activeTab, setTab }) {
+function MobileTabsBar({ activeTab, setTab }) {
+  // Render bar horizontal solo en mobile (controlado por CSS .mobile-tabs-bar via media query)
+  // Auto-scroll del tab activo a la vista
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const active = el.querySelector('.mobile-tab.active');
+    if (active && active.scrollIntoView) {
+      active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  }, [activeTab]);
+
+  return (
+    <div className="mobile-tabs-bar" ref={ref} role="tablist" aria-label="Vistas del dashboard">
+      {TABS.map(t => (
+        <button
+          key={t.id}
+          role="tab"
+          aria-selected={activeTab === t.id}
+          className={`mobile-tab ${activeTab === t.id ? 'active' : ''}`}
+          onClick={() => setTab(t.id)}
+        >
+          <Icon name={t.icon} size={14} />
+          <span>{t.label}</span>
+          {t.badge && <span className="pill coral" style={{ padding: '0 6px', fontSize: 9, lineHeight: 1.4, marginLeft: 4 }}>{t.badge}</span>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function DashboardSidebar({ activeTab, setTab, onClose }) {
   return (
     <aside style={{
       width: 220,
@@ -111,12 +165,21 @@ function DashboardSidebar({ activeTab, setTab }) {
       flexShrink: 0,
       overflowY: 'auto',
     }}>
-      <div style={{ padding: '6px 14px 16px', marginBottom: 4, borderBottom: '1px solid var(--line-1)' }}>
+      <div style={{ padding: '6px 14px 16px', marginBottom: 4, borderBottom: '1px solid var(--line-1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <PolarisLogo size={28} pulse glow={false} />
+        {/* Botón cerrar drawer — solo visible en mobile (CSS lo muestra) */}
+        <button
+          className="btn btn-icon btn-sm btn-mobile-menu"
+          onClick={onClose}
+          aria-label="Cerrar menu"
+          title="Cerrar"
+        >
+          <Icon name="x" size={16} />
+        </button>
       </div>
       <div className="mono t-3" style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', padding: '12px 14px 8px' }}>Operaciones</div>
       {TABS.map(t => (
-        <div key={t.id} className={`nav-item ${activeTab === t.id ? 'active' : ''}`} onClick={() => setTab(t.id)}>
+        <div key={t.id} className={`nav-item ${activeTab === t.id ? 'active' : ''}`} onClick={() => { setTab(t.id); onClose && onClose(); }}>
           <Icon name={t.icon} size={16} />
           <span className="grow">{t.label}</span>
           {t.badge && <span className="pill coral" style={{ padding: '1px 7px', fontSize: 10, lineHeight: 1.2 }}>{t.badge}</span>}
@@ -156,6 +219,38 @@ function DashboardSidebar({ activeTab, setTab }) {
 
 function DashboardScreen({ politician, onNavigate, onSelectPolitician }) {
   const [tab, setTab] = React.useState('overview');
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const isMobile = useIsMobile();
+
+  // Sincroniza body class para drawer overlay (CSS body.sidebar-open lo dibuja)
+  React.useEffect(() => {
+    if (sidebarOpen && isMobile) {
+      document.body.classList.add('sidebar-open');
+    } else {
+      document.body.classList.remove('sidebar-open');
+    }
+    return () => document.body.classList.remove('sidebar-open');
+  }, [sidebarOpen, isMobile]);
+
+  // Cierra el drawer al cambiar de tab en mobile
+  React.useEffect(() => {
+    if (isMobile) setSidebarOpen(false);
+  }, [tab, isMobile]);
+
+  // Cierra el drawer si tapan el overlay
+  React.useEffect(() => {
+    if (!sidebarOpen) return;
+    const onClick = (e) => {
+      // El overlay es el ::before de body — no es clickeable directo,
+      // así que detectamos clicks fuera del aside.
+      const aside = document.querySelector('div[data-screen-label="04 Dashboard"] aside');
+      if (aside && !aside.contains(e.target) && !e.target.closest('.btn-mobile-menu')) {
+        setSidebarOpen(false);
+      }
+    };
+    document.addEventListener('click', onClick);
+    return () => document.removeEventListener('click', onClick);
+  }, [sidebarOpen]);
 
   const TabPane = {
     overview: OverviewTab,
@@ -169,9 +264,16 @@ function DashboardScreen({ politician, onNavigate, onSelectPolitician }) {
 
   return (
     <div className="page-in" data-screen-label="04 Dashboard" style={{ minHeight: '100vh', background: 'var(--bg-0)', display: 'flex', flexDirection: 'column' }}>
-      <DashboardNavbar politician={politician} onNavigate={onNavigate} onSelectPolitician={onSelectPolitician} />
+      <DashboardNavbar
+        politician={politician}
+        onNavigate={onNavigate}
+        onSelectPolitician={onSelectPolitician}
+        onToggleSidebar={() => setSidebarOpen(v => !v)}
+      />
+      {/* Tabs horizontales scroll — solo visible en mobile via CSS */}
+      <MobileTabsBar activeTab={tab} setTab={setTab} />
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        <DashboardSidebar activeTab={tab} setTab={setTab} />
+        <DashboardSidebar activeTab={tab} setTab={setTab} onClose={() => setSidebarOpen(false)} />
         <main style={{ flex: 1, overflow: 'auto', minWidth: 0 }}>
           {TabPane && <TabPane key={`${politician.id}-${tab}`} politician={politician} setTab={setTab} />}
         </main>
@@ -181,3 +283,4 @@ function DashboardScreen({ politician, onNavigate, onSelectPolitician }) {
 }
 
 window.DashboardScreen = DashboardScreen;
+window.useIsMobile = useIsMobile;
