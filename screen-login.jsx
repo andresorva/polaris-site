@@ -156,7 +156,7 @@ function LoginScreen({ onNavigate }) {
               <div className="display" style={{ fontSize: 26, fontWeight: 500, letterSpacing: '-0.02em', marginBottom: 6 }}>Verificación en dos pasos</div>
               <p className="t-3" style={{ fontSize: 13, marginBottom: 32 }}>
                 Ingresa el código de 6 dígitos de tu app autenticadora.<br/>
-                Acceso desde IP <span className="mono t-2">181.xxx.xxx.42</span> · Caracas, VE
+                Acceso desde IP <span className="mono t-2">187.xxx.xxx.42</span> · Ciudad de México, MX
               </p>
 
               <form onSubmit={verify}>

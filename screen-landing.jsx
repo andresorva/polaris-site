@@ -737,12 +737,12 @@ function ContactSection({ onLogin }) {
                   </div>
                   <div>
                     <label className="mono t-3" style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>País</label>
-                    <select className="input">
-                      <option>Venezuela</option>
-                      <option>Colombia</option>
+                    <select className="input" defaultValue="México">
                       <option>México</option>
+                      <option>Colombia</option>
                       <option>Argentina</option>
                       <option>Chile</option>
+                      <option>Venezuela</option>
                       <option>Otro</option>
                     </select>
                   </div>

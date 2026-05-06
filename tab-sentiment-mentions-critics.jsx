@@ -96,12 +96,12 @@ function SentimentTab({ politician }) {
             </div>
             <div className="flex col gap-3">
               {[
-                { k: 'Cabildo Maracaibo', v: 18.4, d: 'pos', desc: 'Movilización ciudadana, narrativa de unidad' },
-                { k: 'Plan económico', v: 6.2, d: 'pos', desc: 'Propuestas concretas, recepción favorable' },
-                { k: 'Voto en el extranjero', v: 4.1, d: 'pos', desc: 'Expectativas altas en diáspora' },
-                { k: 'Inhabilitación política', v: -8.4, d: 'neg', desc: 'Narrativa adversaria amplificada' },
-                { k: 'Sanciones internacionales', v: -4.2, d: 'neg', desc: 'Asociación negativa por oposición' },
-                { k: 'Cuentas coordinadas', v: -3.8, d: 'neg', desc: 'Red oficialista publicando ataques' },
+                { k: 'Jornada de obras Cuajimalpa', v: 18.4, d: 'pos', desc: 'Repercusión local positiva, narrativa de obra pública' },
+                { k: 'Servicios urbanos', v: 6.2, d: 'pos', desc: 'Quejas atendidas, recepción favorable' },
+                { k: 'Coordinación con CDMX', v: 4.1, d: 'pos', desc: 'Visibilidad nacional, expectativa positiva' },
+                { k: 'Inseguridad zona alta', v: -8.4, d: 'neg', desc: 'Narrativa de robos amplificada' },
+                { k: 'Baches sin atender', v: -4.2, d: 'neg', desc: 'Asociación negativa con incumplimiento' },
+                { k: 'Cuentas coordinadas', v: -3.8, d: 'neg', desc: 'Red sospechosa publicando ataques' },
               ].map((dr, i) => (
                 <div key={i} className="flex items-c gap-3" style={{ padding: '10px 0', borderBottom: i === 5 ? 'none' : '1px solid var(--line-1)' }}>
                   <div style={{ width: 4, height: 28, borderRadius: 4, background: dr.d === 'pos' ? '#2EE6C8' : '#FF4D6D' }} />
@@ -325,12 +325,12 @@ function MentionsTab({ politician }) {
               </div>
               <div className="flex col gap-2">
                 {[
-                  ['#VenezuelaLibre', 28400, 'pos'],
-                  ['#CabildoMaracaibo', 18200, 'pos'],
-                  ['#28J', 12800, 'neu'],
-                  ['#FraudeOpositor', 8400, 'neg'],
-                  ['#YoVotoMC', 6200, 'pos'],
-                  ['#EdmundoPresidente', 5400, 'pos'],
+                  ['#Cuajimalpa', 28400, 'pos'],
+                  ['#ObrasCuajimalpa', 18200, 'pos'],
+                  ['#CDMX', 12800, 'neu'],
+                  ['#NoHaceNada', 8400, 'neg'],
+                  ['#VecinosCuaji', 6200, 'pos'],
+                  ['#PoderCDMX', 5400, 'neu'],
                 ].map(([h, v, s]) => (
                   <div key={h} className="flex between items-c" style={{ fontSize: 12, padding: '4px 0' }}>
                     <span className="mono" style={{ color: s === 'pos' ? 'var(--teal)' : s === 'neg' ? 'var(--neg)' : 'var(--text-2)' }}>{h}</span>
@@ -346,10 +346,10 @@ function MentionsTab({ politician }) {
               </div>
               <div className="flex col gap-3">
                 {[
-                  ['Carolina Núñez', '@CarolinaNZ_VE', 'CN', '284K', 'pos'],
-                  ['Roberto Salas', '@analistaPol', 'RS', '184K', 'neu'],
-                  ['Política Joven', '@joven.politico', 'PJ', '1.2M', 'pos'],
-                  ['Diosdado Cabello', '@dcabellor', 'DC', '4.2M', 'neg'],
+                  ['Vecino Cuajimalpa', '@vecino_cuaji', 'VC', '184K', 'pos'],
+                  ['Análisis CDMX', '@analistapol_mx', 'AC', '92K', 'neu'],
+                  ['Noticias CDMX', '@noticias.cdmx', 'NC', '1.2M', 'pos'],
+                  ['Crítica Local', '@critica_local', 'CL', '420K', 'neg'],
                 ].map(([n, h, a, r, s]) => (
                   <div key={h} className="flex items-c gap-3">
                     <Avatar initials={a} size={30} gradient={s === 'pos' ? 'linear-gradient(135deg, #2EE6C8, #4D7CFF)' : s === 'neg' ? 'linear-gradient(135deg, #FF4D6D, #A78BFA)' : undefined} />

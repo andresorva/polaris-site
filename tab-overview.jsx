@@ -229,9 +229,9 @@ function OverviewTab({ politician, setTab }) {
               </div>
               <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14, position: 'relative' }}>
                 {[
-                  { icon: 'arrow-up', color: 'var(--pos)', text: <>El cabildo de <b>Maracaibo</b> está generando un repunte de <b className="t-pos">+184%</b> en menciones positivas en Zulia.</> },
-                  { icon: 'warning', color: 'var(--warn)', text: <>Detectado patrón coordinado en 12 cuentas afiliadas a red oficialista. <b>Inicio: hace 6h, ventana 04:00-06:00.</b></> },
-                  { icon: 'zap', color: 'var(--blue)', text: <>El hashtag <span className="mono">#VenezuelaLibre</span> alcanzó <b>284K usos en TikTok</b>. Demografía dominante: 18-24 años urbanos.</> },
+                  { icon: 'arrow-up', color: 'var(--pos)', text: <>La jornada de obras en <b>Cuajimalpa</b> está generando un repunte de <b className="t-pos">+184%</b> en menciones positivas locales.</> },
+                  { icon: 'warning', color: 'var(--warn)', text: <>Detectado patrón coordinado en 12 cuentas con publicación sincronizada. <b>Inicio: hace 6h, ventana 04:00-06:00.</b></> },
+                  { icon: 'zap', color: 'var(--blue)', text: <>El hashtag <span className="mono">#Cuajimalpa</span> alcanzó <b>28K usos en TikTok</b>. Demografía dominante: 25-44 años urbanos.</> },
                 ].map((ins, i) => (
                   <div key={i} className="flex items-s gap-3">
                     <div style={{ marginTop: 1, width: 18, height: 18, borderRadius: 999, background: 'var(--bg-3)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: ins.color, flexShrink: 0 }}>
@@ -274,13 +274,13 @@ function OverviewTab({ politician, setTab }) {
             </div>
             <div className="flex col gap-3">
               {[
-                ['Distrito Capital', 38400, 72, '#2EE6C8'],
-                ['Zulia', 28200, 78, '#2EE6C8'],
-                ['Miranda', 18900, 64, '#FFB546'],
-                ['Carabobo', 12400, 58, '#FFB546'],
-                ['Lara', 8800, 52, '#FFB546'],
-                ['Anzoátegui', 6200, 48, '#FF4D6D'],
-                ['Otros (19)', 22400, 61, '#6B7794'],
+                ['CDMX', 38400, 72, '#2EE6C8'],
+                ['Cuajimalpa', 28200, 78, '#2EE6C8'],
+                ['Estado de México', 18900, 64, '#FFB546'],
+                ['Jalisco', 12400, 58, '#FFB546'],
+                ['Nuevo León', 8800, 52, '#FFB546'],
+                ['Puebla', 6200, 48, '#FF4D6D'],
+                ['Otros (24)', 22400, 61, '#6B7794'],
               ].map(([name, v, sent, c]) => {
                 const max = 38400;
                 return (
