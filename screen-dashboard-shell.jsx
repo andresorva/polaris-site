@@ -4,6 +4,8 @@
 
 const TABS = [
   { id: 'overview', label: 'Vista general', icon: 'compass' },
+  { id: 'brief', label: 'Daily Brief', icon: 'star' },
+  { id: 'strategist', label: 'Estrategia', icon: 'spark' },
   { id: 'sentiment', label: 'Sentimiento', icon: 'pulse' },
   { id: 'mentions', label: 'Menciones', icon: 'volume' },
   { id: 'critics', label: 'Críticos', icon: 'crosshair' },
@@ -307,6 +309,8 @@ function DashboardScreen({ politician, onNavigate, onSelectPolitician }) {
 
   const TabPane = {
     overview: OverviewTab,
+    brief: typeof DailyBriefTab !== 'undefined' ? DailyBriefTab : OverviewTab,
+    strategist: typeof StrategistTab !== 'undefined' ? StrategistTab : OverviewTab,
     sentiment: SentimentTab,
     mentions: MentionsTab,
     critics: CriticsTab,
@@ -318,6 +322,9 @@ function DashboardScreen({ politician, onNavigate, onSelectPolitician }) {
   return (
     <div className="page-in" data-screen-label="04 Dashboard" style={{ minHeight: '100vh', background: 'var(--bg-0)', display: 'flex', flexDirection: 'column' }}>
       <DemoModeBanner />
+      {typeof CrisisBanner !== 'undefined' && (
+        <CrisisBanner politicianId={politician.id} onSeeDetail={() => setTab('alerts')} />
+      )}
       <DashboardNavbar
         politician={politician}
         onNavigate={onNavigate}

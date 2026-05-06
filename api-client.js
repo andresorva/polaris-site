@@ -151,6 +151,35 @@
     return request('/health');
   }
 
+  // === Endpoints nuevos del Día 3 Parte 2 (Tareas 4-6) ===
+
+  async function getFreshness(id) {
+    return request(`/api/v1/politicians/${encodeURIComponent(id)}/freshness`);
+  }
+
+  async function getTopics(id, opts) {
+    const params = { days: opts && opts.days };
+    return request(`/api/v1/politicians/${encodeURIComponent(id)}/topics`, params);
+  }
+
+  async function getCrisisSignals(id, opts) {
+    const params = { hours: opts && opts.hours };
+    return request(`/api/v1/politicians/${encodeURIComponent(id)}/crisis-signals`, params);
+  }
+
+  async function getCoordinationGroups(id, opts) {
+    const params = {
+      active_only: opts && opts.active_only,
+      limit: opts && opts.limit,
+    };
+    return request(`/api/v1/politicians/${encodeURIComponent(id)}/coordination-groups`, params);
+  }
+
+  async function getDailyBrief(id, dateStr) {
+    const params = dateStr ? { date: dateStr } : undefined;
+    return request(`/api/v1/politicians/${encodeURIComponent(id)}/daily-brief`, params);
+  }
+
   window.apiClient = {
     request,
     getPoliticians,
@@ -161,6 +190,12 @@
     getPPI,
     getTimeseries,
     healthCheck,
+    // Día 3 Parte 2
+    getFreshness,
+    getTopics,
+    getCrisisSignals,
+    getCoordinationGroups,
+    getDailyBrief,
     cacheClear: _cacheClear,
   };
 })();

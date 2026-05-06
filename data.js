@@ -245,6 +245,58 @@
     return typeof s === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
   }
 
+  // === Loaders nuevos del Día 3 Parte 2 (Tareas 4-6) ===
+
+  async function loadFreshness(id) {
+    if (!_isUuid(id)) return _fallback({ status: 'missing', hours_since_collection: null }, new Error('not a real id'));
+    try {
+      const data = await api.getFreshness(id);
+      return _wrap(data);
+    } catch (err) {
+      return _fallback({ status: 'missing', hours_since_collection: null }, err);
+    }
+  }
+
+  async function loadTopics(id, opts) {
+    if (!_isUuid(id)) return _fallback({ topics: [] }, new Error('not a real id'));
+    try {
+      const data = await api.getTopics(id, opts);
+      return _wrap(data);
+    } catch (err) {
+      return _fallback({ topics: [] }, err);
+    }
+  }
+
+  async function loadCrisisSignals(id, opts) {
+    if (!_isUuid(id)) return _fallback({ has_active_crisis: false, signals: [] }, new Error('not a real id'));
+    try {
+      const data = await api.getCrisisSignals(id, opts);
+      return _wrap(data);
+    } catch (err) {
+      return _fallback({ has_active_crisis: false, signals: [] }, err);
+    }
+  }
+
+  async function loadCoordinationGroups(id, opts) {
+    if (!_isUuid(id)) return _fallback({ groups: [] }, new Error('not a real id'));
+    try {
+      const data = await api.getCoordinationGroups(id, opts);
+      return _wrap(data);
+    } catch (err) {
+      return _fallback({ groups: [] }, err);
+    }
+  }
+
+  async function loadDailyBrief(id, dateStr) {
+    if (!_isUuid(id)) return _fallback(null, new Error('not a real id'));
+    try {
+      const data = await api.getDailyBrief(id, dateStr);
+      return _wrap(data);
+    } catch (err) {
+      return _fallback(null, err);
+    }
+  }
+
   // === API global expuesta a los componentes ===
   window.PolarisData = {
     loadPoliticians,
@@ -254,6 +306,12 @@
     loadTopAuthors,
     loadMentions,
     loadTimeseries,
+    // Día 3 Parte 2
+    loadFreshness,
+    loadTopics,
+    loadCrisisSignals,
+    loadCoordinationGroups,
+    loadDailyBrief,
     isUuid: _isUuid,
   };
 
