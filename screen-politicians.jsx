@@ -7,10 +7,34 @@ function PoliticiansScreen({ onNavigate, onSelectPolitician }) {
   const [view, setView] = React.useState('grid'); // grid | list
   const [region, setRegion] = React.useState('Todas');
 
-  const regions = ['Todas', 'Venezuela', 'Colombia', 'México', 'Argentina', 'Chile'];
-  const filtered = POLITICIANS.filter(p =>
+  // Estado del fetch de politicos: loading -> {data, error, isFallback}
+  const [state, setState] = React.useState({
+    data: window.POLITICIANS_MOCK || [],
+    loading: true,
+    error: null,
+    isFallback: false,
+  });
+  const [refreshTick, setRefreshTick] = React.useState(0);
+
+  React.useEffect(() => {
+    let alive = true;
+    setState(s => ({ ...s, loading: true }));
+    window.PolarisData.loadPoliticians().then(res => {
+      if (!alive) return;
+      setState({ ...res, loading: false });
+      window.PolarisFallback && window.PolarisFallback.notify(res.isFallback, res.error);
+    });
+    return () => { alive = false; };
+  }, [refreshTick]);
+
+  // Region list dinamica (incluye mock + real)
+  const regionsSet = new Set(['Todas']);
+  state.data.forEach(p => p.region && regionsSet.add(p.region));
+  const regions = Array.from(regionsSet);
+
+  const filtered = (state.data || []).filter(p =>
     (region === 'Todas' || p.region === region) &&
-    (search === '' || p.name.toLowerCase().includes(search.toLowerCase()) || p.party.toLowerCase().includes(search.toLowerCase()))
+    (search === '' || (p.name || '').toLowerCase().includes(search.toLowerCase()) || (p.party || '').toLowerCase().includes(search.toLowerCase()))
   );
 
   const select = (p) => {
@@ -61,10 +85,31 @@ function PoliticiansScreen({ onNavigate, onSelectPolitician }) {
               Cada perfil es una sala de operaciones independiente. Streams, alertas y reportes se ajustan al objetivo seleccionado.
             </p>
           </div>
-          <button className="btn btn-primary">
-            <Icon name="plus" size={14} /> Añadir político
-          </button>
+          <div className="flex items-c gap-2">
+            <button className="btn btn-sm" onClick={() => { window.apiClient && window.apiClient.cacheClear(); setRefreshTick(t => t + 1); }} title="Recargar">
+              <Icon name="history" size={13} /> Recargar
+            </button>
+            <button className="btn btn-primary">
+              <Icon name="plus" size={14} /> Añadir político
+            </button>
+          </div>
         </div>
+
+        {/* Estado del fetch — banner sutil sobre la lista */}
+        {state.loading && (
+          <div className="card card-pad" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span className="dot live" />
+            <span className="t-3 mono" style={{ fontSize: 11 }}>Cargando políticos desde la API…</span>
+          </div>
+        )}
+        {!state.loading && state.error && state.isFallback && (
+          <div className="card card-pad" style={{ marginBottom: 12, borderColor: 'rgba(255,181,70,0.3)', background: 'rgba(255,181,70,0.06)', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Icon name="warning" size={14} style={{ color: 'var(--warn)' }} />
+            <span className="t-2" style={{ fontSize: 12 }}>
+              No se pudo conectar al API. Mostrando datos de demostración. <button className="btn btn-sm btn-ghost" style={{ padding: '2px 8px' }} onClick={() => setRefreshTick(t => t + 1)}>Reintentar</button>
+            </span>
+          </div>
+        )}
 
         {/* Toolbar */}
         <div className="flex items-c gap-3 wrap" style={{ marginBottom: 24 }}>

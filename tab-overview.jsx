@@ -45,8 +45,52 @@ function TimeRangeSelector({ value, onChange }) {
 
 function OverviewTab({ politician, setTab }) {
   const [range, setRange] = React.useState('30d');
-  const series = React.useMemo(() => genSentimentSeries(politician.id.charCodeAt(0), politician.sentiment, 8, 30), [politician]);
-  const seriesShort = React.useMemo(() => series.slice(-7).map(d => d.total), [series]);
+  const isLive = window.PolarisData && window.PolarisData.isUuid(politician.id);
+
+  // Live data: PPI + breakdown. Si no es UUID, se queda con los valores del mock politician.
+  const [live, setLive] = React.useState({
+    ppi: null,
+    breakdown: null,
+    loading: isLive,
+    error: null,
+    isFallback: !isLive,
+  });
+
+  React.useEffect(() => {
+    if (!isLive) return;
+    let alive = true;
+    setLive(s => ({ ...s, loading: true }));
+    Promise.all([
+      window.PolarisData.loadPPI(politician.id),
+      window.PolarisData.loadSentimentBreakdown(politician.id, { days: 30 }),
+    ]).then(([ppiR, brR]) => {
+      if (!alive) return;
+      const fallback = ppiR.isFallback || brR.isFallback;
+      setLive({
+        ppi: ppiR.data,
+        breakdown: brR.data,
+        loading: false,
+        error: ppiR.error || brR.error,
+        isFallback: fallback,
+      });
+      window.PolarisFallback && window.PolarisFallback.notify(fallback, ppiR.error || brR.error);
+    });
+    return () => { alive = false; };
+  }, [politician.id, isLive]);
+
+  // Valores efectivos: prefiere live cuando esté disponible
+  const sentimentValue = (live.ppi && live.ppi.ppi && typeof live.ppi.ppi.score === 'number')
+    ? Math.round(live.ppi.ppi.score)
+    : politician.sentiment;
+  const sovValue = live.ppi && typeof live.ppi.sov_24h === 'number'
+    ? (live.ppi.sov_24h >= 1000 ? `${(live.ppi.sov_24h / 1000).toFixed(1)}K` : String(live.ppi.sov_24h))
+    : politician.mentions;
+  const momentumValue = (live.ppi && live.ppi.momentum) || politician.trendDelta || 0;
+
+  // Breakdown real para el donut + barras horizontales
+  const br = (live.breakdown && live.breakdown.breakdown) || null;
+
+  const series = React.useMemo(() => genSentimentSeries(politician.id.charCodeAt(0), sentimentValue || 50, 8, 30), [politician, sentimentValue]);
   const sparkA = [62,58,61,55,68,72,69,74,78,75,80,84];
   const sparkB = [12,14,16,15,18,22,28,32,38,42,48,52];
   const sparkC = [4.1,4.2,4.0,4.3,4.5,4.4,4.6,4.8,5.0,4.9,5.1,5.2];
@@ -68,11 +112,11 @@ function OverviewTab({ politician, setTab }) {
       />
 
       <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {/* KPIs */}
+        {/* KPIs — usa live data cuando esté disponible */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-          <KPI label="SENTIMIENTO" value={politician.sentiment} sub="/100" delta={politician.trendDelta}
+          <KPI label={isLive ? 'PPI · LIVE' : 'SENTIMIENTO'} value={live.loading ? '…' : (sentimentValue ?? '—')} sub="/100" delta={momentumValue}
                sparkData={sparkA} accent="#2EE6C8" />
-          <KPI label="MENCIONES 24H" value={politician.mentions} delta={24.8}
+          <KPI label="MENCIONES 24H" value={live.loading ? '…' : sovValue} delta={24.8}
                sparkData={sparkB} accent="#4D7CFF" />
           <KPI label="ALCANCE ESTIMADO" value="4.2M" delta={8.1}
                sparkData={sparkC} accent="#A78BFA" />
@@ -123,11 +167,15 @@ function OverviewTab({ politician, setTab }) {
               </div>
             </div>
             <div className="flex col gap-3" style={{ marginTop: 8 }}>
-              {[
+              {(br ? [
+                ['Positivo', br.pct ? br.pct.positive : 0, '#2EE6C8', String(br.positive || 0)],
+                ['Neutral', br.pct ? br.pct.neutral : 0, '#6B7794', String(br.neutral || 0)],
+                ['Negativo', br.pct ? br.pct.negative : 0, '#FF4D6D', String(br.negative || 0)],
+              ] : [
                 ['Positivo', 62, '#2EE6C8', '88K'],
                 ['Neutral', 24, '#6B7794', '34K'],
                 ['Negativo', 14, '#FF4D6D', '20K'],
-              ].map(([label, val, color, count]) => (
+              ]).map(([label, val, color, count]) => (
                 <div key={label}>
                   <div className="flex between items-c" style={{ marginBottom: 6, fontSize: 12 }}>
                     <span className="flex items-c gap-2"><span className="dot" style={{ background: color }} />{label}</span>
