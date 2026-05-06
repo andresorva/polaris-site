@@ -9,14 +9,14 @@
    ============================================ */
 
 window.POLARIS_CONFIG = {
-  // TODO(andres): reemplazar con la URL real de Railway despues del deploy
-  // (formato: https://polaris-production-xxxx.up.railway.app — sin slash final)
-  API_BASE_URL: 'https://polaris-api.railway.app',
+  // Backend POLARIS en produccion (Railway, plan Pro de Andres)
+  API_BASE_URL: 'https://web-production-d6505.up.railway.app',
 
-  // UUID de Carlos Orvananos Rea en Supabase (politico principal validado)
+  // UUID de Carlos Orvañanos Rea en Supabase (politico principal validado)
   POLITICIAN_ID_COR: '65dc08f0-8fe9-463f-880f-36b5da66ebe6',
 
-  // Slug de Claudia Sheinbaum (alto volumen, validacion pipeline)
+  // UUID de Claudia Sheinbaum (alto volumen, validacion pipeline)
+  POLITICIAN_ID_SHEINBAUM: '9bf67ca9-492f-49fe-bb85-862b5149cb57',
   POLITICIAN_SLUG_SHEINBAUM: 'claudia-sheinbaum',
 
   // Configuracion del cliente HTTP
