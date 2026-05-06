@@ -1,5 +1,12 @@
 /* ============================================
    POLARIS — Dashboard: Alerts / Reports / Sources tabs
+
+   TODO(api): backend /api/v1/alerts existe pero esta vacio
+   (necesita 3+ dias de history daily para detectar anomalias).
+   Reports y Sources NO tienen endpoint todavia. Cuando se
+   implementen, conectar igual que overview/sentiment/mentions
+   (loadXxx + isLive + fallback a mock + banner).
+   Por ahora estos 3 tabs muestran solo datos mock.
    ============================================ */
 
 // =============================================

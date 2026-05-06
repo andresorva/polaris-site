@@ -8,7 +8,29 @@
 function SentimentTab({ politician }) {
   const [range, setRange] = React.useState('30d');
   const [granularity, setGranularity] = React.useState('day');
-  const series = React.useMemo(() => genSentimentSeries(politician.id.charCodeAt(0), politician.sentiment, 8, 30), [politician]);
+  const series = React.useMemo(() => genSentimentSeries(politician.id.charCodeAt(0), politician.sentiment || 50, 8, 30), [politician]);
+
+  const isLive = window.PolarisData && window.PolarisData.isUuid(politician.id);
+  const [live, setLive] = React.useState({ breakdown: null, loading: isLive, error: null, isFallback: !isLive });
+
+  React.useEffect(() => {
+    if (!isLive) return;
+    let alive = true;
+    setLive(s => ({ ...s, loading: true }));
+    window.PolarisData.loadSentimentBreakdown(politician.id, { days: 30 }).then(res => {
+      if (!alive) return;
+      setLive({ breakdown: res.data, loading: false, error: res.error, isFallback: res.isFallback });
+      window.PolarisFallback && window.PolarisFallback.notify(res.isFallback, res.error);
+    });
+    return () => { alive = false; };
+  }, [politician.id, isLive]);
+
+  const br = (live.breakdown && live.breakdown.breakdown) || null;
+  const pos = br ? Math.round(br.pct ? br.pct.positive : 0) : 62;
+  const neg = br ? Math.round(br.pct ? br.pct.negative : 0) : 14;
+  const neu = br ? Math.round(br.pct ? br.pct.neutral : 0) : 24;
+  const net = pos - neg;
+  const polarization = ((100 - neu) / 100).toFixed(2);
 
   return (
     <div className="fade-in">
@@ -26,12 +48,12 @@ function SentimentTab({ politician }) {
       />
 
       <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {/* Top KPIs */}
+        {/* Top KPIs — usan breakdown real cuando isLive */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-          <KPI label="ÍNDICE NETO" value="+38" sub="−100 a +100" delta={6.4} sparkData={[28,32,30,34,38,36,40,38,42,40,42,38]} accent="#2EE6C8" />
-          <KPI label="POSITIVAS" value="62" sub="%" delta={4.2} sparkData={[58,60,59,62,64,63,65,62,64,62,63,62]} accent="#2EE6C8" />
-          <KPI label="NEGATIVAS" value="14" sub="%" delta={-2.1} sparkData={[18,17,16,15,14,15,14,13,14,15,14,14]} accent="#FF4D6D" />
-          <KPI label="POLARIZACIÓN" value="0.62" sub="índice" delta={8.4} sparkData={[0.5,0.52,0.54,0.55,0.58,0.60,0.61,0.60,0.62,0.61,0.62,0.62]} accent="#A78BFA" />
+          <KPI label="ÍNDICE NETO" value={live.loading ? '…' : (net > 0 ? '+' + net : String(net))} sub="−100 a +100" delta={6.4} sparkData={[28,32,30,34,38,36,40,38,42,40,42,38]} accent="#2EE6C8" />
+          <KPI label="POSITIVAS" value={live.loading ? '…' : pos} sub="%" delta={4.2} sparkData={[58,60,59,62,64,63,65,62,64,62,63,62]} accent="#2EE6C8" />
+          <KPI label="NEGATIVAS" value={live.loading ? '…' : neg} sub="%" delta={-2.1} sparkData={[18,17,16,15,14,15,14,13,14,15,14,14]} accent="#FF4D6D" />
+          <KPI label="POLARIZACIÓN" value={live.loading ? '…' : polarization} sub="índice" delta={8.4} sparkData={[0.5,0.52,0.54,0.55,0.58,0.60,0.61,0.60,0.62,0.61,0.62,0.62]} accent="#A78BFA" />
         </div>
 
         {/* Big chart */}
@@ -183,24 +205,41 @@ function MentionsTab({ politician }) {
   const [filter, setFilter] = React.useState('all');
   const [platform, setPlatform] = React.useState('all');
   const filters = [
-    { id: 'all', label: 'Todos', count: '142K' },
-    { id: 'pos', label: 'Positivos', count: '88K' },
-    { id: 'neu', label: 'Neutros', count: '34K' },
-    { id: 'neg', label: 'Negativos', count: '20K' },
-    { id: 'viral', label: 'Virales', count: '124' },
-    { id: 'suspicious', label: 'Sospechosos', count: '412' },
+    { id: 'all', label: 'Todos' },
+    { id: 'pos', label: 'Positivos' },
+    { id: 'neu', label: 'Neutros' },
+    { id: 'neg', label: 'Negativos' },
+    { id: 'viral', label: 'Virales' },
+    { id: 'suspicious', label: 'Sospechosos' },
   ];
   const platforms = ['all', 'X', 'TikTok', 'Instagram', 'Facebook', 'YouTube', 'Telegram'];
 
-  const filtered = FEED_ITEMS.filter(f => {
+  const isLive = window.PolarisData && window.PolarisData.isUuid(politician.id);
+  const [state, setState] = React.useState({ data: window.FEED_ITEMS_MOCK || [], loading: isLive, error: null, isFallback: !isLive });
+
+  React.useEffect(() => {
+    if (!isLive) return;
+    let alive = true;
+    setState(s => ({ ...s, loading: true }));
+    window.PolarisData.loadMentions({ politician_id: politician.id, limit: 50, has_parent: false }).then(res => {
+      if (!alive) return;
+      setState({ ...res, loading: false });
+      window.PolarisFallback && window.PolarisFallback.notify(res.isFallback, res.error);
+    });
+    return () => { alive = false; };
+  }, [politician.id, isLive]);
+
+  const items = (state.data || []).filter(f => {
+    if (platform !== 'all' && f.platform !== platform) return false;
     if (filter === 'all') return true;
     if (filter === 'pos') return f.sentiment === 'pos';
     if (filter === 'neu') return f.sentiment === 'neu';
     if (filter === 'neg') return f.sentiment === 'neg';
-    if (filter === 'viral') return f.flags.includes('viral');
-    if (filter === 'suspicious') return f.flags.includes('suspicious');
+    if (filter === 'viral') return f.flags && f.flags.includes('viral');
+    if (filter === 'suspicious') return f.flags && f.flags.includes('suspicious');
     return true;
   });
+  const filtered = items;
 
   return (
     <div className="fade-in">
@@ -229,7 +268,6 @@ function MentionsTab({ politician }) {
                 display: 'inline-flex', alignItems: 'center', gap: 6,
               }}>
                 {f.label}
-                <span className="mono" style={{ fontSize: 10, color: 'var(--text-4)' }}>{f.count}</span>
               </button>
             ))}
           </div>
@@ -335,6 +373,23 @@ function MentionsTab({ politician }) {
 // CRITICS TAB
 // =============================================
 function CriticsTab({ politician }) {
+  const isLive = window.PolarisData && window.PolarisData.isUuid(politician.id);
+  const [state, setState] = React.useState({ data: window.TOP_CRITICS_MOCK || [], loading: isLive, error: null, isFallback: !isLive });
+
+  React.useEffect(() => {
+    if (!isLive) return;
+    let alive = true;
+    setState(s => ({ ...s, loading: true }));
+    window.PolarisData.loadTopAuthors(politician.id, { scope: 'third_party', days: 30, limit: 10 }).then(res => {
+      if (!alive) return;
+      setState({ ...res, loading: false });
+      window.PolarisFallback && window.PolarisFallback.notify(res.isFallback, res.error);
+    });
+    return () => { alive = false; };
+  }, [politician.id, isLive]);
+
+  const critics = state.data || [];
+
   return (
     <div className="fade-in">
       <PageHeader
@@ -376,10 +431,21 @@ function CriticsTab({ politician }) {
                 <div key={i} className="mono t-3" style={{ fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{h}</div>
               ))}
             </div>
-            {TOP_CRITICS.map((c, i) => (
+            {state.loading && (
+              <div className="flex items-c gap-2" style={{ padding: '20px 20px' }}>
+                <span className="dot live" />
+                <span className="t-3 mono" style={{ fontSize: 11 }}>Cargando críticos…</span>
+              </div>
+            )}
+            {!state.loading && critics.length === 0 && (
+              <div className="t-3 mono" style={{ padding: '20px 20px', fontSize: 11 }}>
+                Sin críticos detectados en la ventana actual.
+              </div>
+            )}
+            {critics.map((c, i) => (
               <div key={i} style={{
                 display: 'grid', gridTemplateColumns: '36px 2fr 1fr 1fr 1fr 36px',
-                padding: '14px 20px', borderBottom: i === TOP_CRITICS.length - 1 ? 'none' : '1px solid var(--line-1)',
+                padding: '14px 20px', borderBottom: i === critics.length - 1 ? 'none' : '1px solid var(--line-1)',
                 alignItems: 'center',
                 cursor: 'pointer',
                 transition: 'background 120ms var(--ease)',

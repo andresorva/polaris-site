@@ -217,10 +217,63 @@ function DashboardSidebar({ activeTab, setTab, onClose }) {
   );
 }
 
+// Banner amarillo "modo demo" que aparece cuando algun fetch fallo
+// y se cayo a datos mock. Se suscribe a CustomEvent('polaris:fallback').
+function DemoModeBanner() {
+  const [fallback, setFallback] = React.useState({ active: false, error: null, at: 0 });
+  const [dismissed, setDismissed] = React.useState(false);
+  React.useEffect(() => {
+    const onEvt = (e) => {
+      const d = e.detail || {};
+      // Solo refresca si cambia el estado o el error
+      if (d.active) {
+        setFallback({ active: true, error: d.error, at: d.ts || Date.now() });
+        setDismissed(false);
+      } else {
+        // No despachamos active=false cada vez para evitar parpadeo;
+        // solo el componente decide si quitarlo cuando un nuevo fetch tiene exito.
+      }
+    };
+    window.addEventListener('polaris:fallback', onEvt);
+    return () => window.removeEventListener('polaris:fallback', onEvt);
+  }, []);
+  if (!fallback.active || dismissed) return null;
+  return (
+    <div className="demo-mode-banner" role="status">
+      <span className="dot" />
+      <span>Mostrando datos de demostración — API no disponible</span>
+      {fallback.error && <span className="mono" style={{ opacity: 0.7, fontSize: 11 }}>({fallback.error.slice(0, 60)})</span>}
+      <button
+        className="btn btn-sm btn-ghost"
+        style={{ marginLeft: 8, padding: '2px 10px', color: 'inherit' }}
+        onClick={() => { window.apiClient && window.apiClient.cacheClear(); window.location.reload(); }}
+      >Reintentar</button>
+      <button
+        aria-label="Cerrar banner"
+        style={{ marginLeft: 4, color: 'inherit', opacity: 0.6, cursor: 'pointer', background: 'none', border: 'none', padding: '0 4px' }}
+        onClick={() => setDismissed(true)}
+      >×</button>
+    </div>
+  );
+}
+
 function DashboardScreen({ politician, onNavigate, onSelectPolitician }) {
   const [tab, setTab] = React.useState('overview');
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [refreshTick, setRefreshTick] = React.useState(0);
   const isMobile = useIsMobile();
+
+  // Auto-refresh del tab activo cada AUTO_REFRESH_MS (60s).
+  // Limpia el cache del API y bumpea refreshTick para forzar re-mount
+  // del TabPane (via prop key) — esto dispara los useEffect internos.
+  React.useEffect(() => {
+    const ms = (window.POLARIS_CONFIG && window.POLARIS_CONFIG.AUTO_REFRESH_MS) || 60000;
+    const timer = setInterval(() => {
+      if (window.apiClient) window.apiClient.cacheClear();
+      setRefreshTick(t => t + 1);
+    }, ms);
+    return () => clearInterval(timer);
+  }, []);
 
   // Sincroniza body class para drawer overlay (CSS body.sidebar-open lo dibuja)
   React.useEffect(() => {
@@ -264,6 +317,7 @@ function DashboardScreen({ politician, onNavigate, onSelectPolitician }) {
 
   return (
     <div className="page-in" data-screen-label="04 Dashboard" style={{ minHeight: '100vh', background: 'var(--bg-0)', display: 'flex', flexDirection: 'column' }}>
+      <DemoModeBanner />
       <DashboardNavbar
         politician={politician}
         onNavigate={onNavigate}
@@ -275,7 +329,7 @@ function DashboardScreen({ politician, onNavigate, onSelectPolitician }) {
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         <DashboardSidebar activeTab={tab} setTab={setTab} onClose={() => setSidebarOpen(false)} />
         <main style={{ flex: 1, overflow: 'auto', minWidth: 0 }}>
-          {TabPane && <TabPane key={`${politician.id}-${tab}`} politician={politician} setTab={setTab} />}
+          {TabPane && <TabPane key={`${politician.id}-${tab}-${refreshTick}`} politician={politician} setTab={setTab} />}
         </main>
       </div>
     </div>
