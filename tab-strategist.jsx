@@ -24,8 +24,8 @@ function StrategistTab({ politician }) {
     return () => { alive = false; };
   }, [politician.id, isUuid]);
 
-  const recs = (state.brief && state.brief.recommendations) || [];
-  const tone = state.brief && state.brief.recommendations
+  const recs = (state?.brief?.recommendations ?? []);
+  const tone = state?.brief?.recommendations
     ? null
     : null; // El backend lo guarda dentro de recommendations; el agent strategist tambien lo expone aparte
 
@@ -53,7 +53,7 @@ function StrategistTab({ politician }) {
           </div>
         )}
 
-        {!state.loading && recs.length === 0 && (
+        {!state.loading && (recs?.length ?? 0) === 0 && (
           <div className="card card-pad" style={{ textAlign: 'center', padding: 40 }}>
             <Icon name="compass" size={32} style={{ color: 'var(--text-3)', display: 'inline-block', marginBottom: 12 }} />
             <div className="display" style={{ fontSize: 18, fontWeight: 500, marginBottom: 8 }}>
@@ -65,13 +65,13 @@ function StrategistTab({ politician }) {
           </div>
         )}
 
-        {!state.loading && recs.length > 0 && (
+        {!state.loading && (recs?.length ?? 0) > 0 && (
           <>
             <div className="mono t-3" style={{ fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-              {recs.length} acciones priorizadas para hoy · {state.brief.brief_date}
+              {(recs?.length ?? 0)} acciones priorizadas para hoy · {state?.brief?.brief_date ?? '—'}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {recs.map((r, i) => <StrategistCard key={i} rec={r} />)}
+              {(recs ?? []).map((r, i) => <StrategistCard key={i} rec={r} />)}
             </div>
           </>
         )}
@@ -81,7 +81,7 @@ function StrategistTab({ politician }) {
 }
 
 function StrategistCard({ rec }) {
-  const priority = rec.priority || 0;
+  const priority = rec?.priority ?? 0;
   const priorityColor = priority === 1 ? '#FF4D6D' : priority === 2 ? '#FFB546' : '#2EE6C8';
 
   return (
@@ -101,14 +101,14 @@ function StrategistCard({ rec }) {
           }}>
             PRIORIDAD {priority}
           </span>
-          {rec.platform && (
+          {rec?.platform && (
             <span className="pill" style={{ fontSize: 10 }}>
-              {rec.platform}
+              {rec?.platform}
             </span>
           )}
-          {rec.optimal_time && (
+          {rec?.optimal_time && (
             <span className="mono t-3" style={{ fontSize: 11 }}>
-              ⏰ {rec.optimal_time} CDMX
+              ⏰ {rec?.optimal_time} CDMX
             </span>
           )}
         </div>
@@ -119,16 +119,16 @@ function StrategistCard({ rec }) {
 
       <div>
         <div className="display" style={{ fontSize: 16, fontWeight: 500, marginBottom: 6, color: 'var(--text-1)' }}>
-          {rec.action || 'Acción sin descripción'}
+          {rec?.action ?? 'Acción sin descripción'}
         </div>
-        {rec.topic && (
+        {rec?.topic && (
           <div className="mono t-3" style={{ fontSize: 11, marginBottom: 8, letterSpacing: '0.04em' }}>
-            Tema: <span className="t-2">{rec.topic}</span>
+            Tema: <span className="t-2">{rec?.topic}</span>
           </div>
         )}
       </div>
 
-      {rec.rationale && (
+      {rec?.rationale && (
         <div style={{
           padding: 12,
           background: 'var(--bg-1)',
@@ -139,7 +139,7 @@ function StrategistCard({ rec }) {
             Por qué
           </div>
           <div className="t-2" style={{ fontSize: 13, lineHeight: 1.5 }}>
-            {rec.rationale}
+            {rec?.rationale}
           </div>
         </div>
       )}

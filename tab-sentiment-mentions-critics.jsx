@@ -26,11 +26,11 @@ function SentimentTab({ politician }) {
   }, [politician.id, isLive]);
 
   const br = (live.breakdown && live.breakdown.breakdown) || null;
-  const pos = br ? Math.round(br.pct ? br.pct.positive : 0) : 62;
-  const neg = br ? Math.round(br.pct ? br.pct.negative : 0) : 14;
-  const neu = br ? Math.round(br.pct ? br.pct.neutral : 0) : 24;
+  const pos = br ? Math.round((br?.pct?.positive) ?? 0) : 62;
+  const neg = br ? Math.round((br?.pct?.negative) ?? 0) : 14;
+  const neu = br ? Math.round((br?.pct?.neutral) ?? 0) : 24;
   const net = pos - neg;
-  const polarization = ((100 - neu) / 100).toFixed(2);
+  const polarization = (typeof neu === 'number' && !isNaN(neu) ? ((100 - neu) / 100).toFixed(2) : '—');
 
   return (
     <div className="fade-in">
@@ -90,7 +90,7 @@ function SentimentTab({ politician }) {
           <div className="card card-pad">
             <div className="section-h">
               <div>
-                <h3>Drivers del sentimiento</h3>
+                <h3>Drivers del sentimiento<span style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(255,181,70,.12)', border: '1px solid rgba(255,181,70,.3)', borderRadius: 999, color: 'var(--warn,#FFB546)', marginLeft: 6, display: 'inline-block', verticalAlign: 'middle' }}>DEMO</span></h3>
                 <div className="t-3" style={{ fontSize: 12 }}>Temas que más afectan al índice</div>
               </div>
             </div>
@@ -120,7 +120,7 @@ function SentimentTab({ politician }) {
           <div className="card card-pad">
             <div className="section-h">
               <div>
-                <h3>Vocabulario emergente</h3>
+                <h3>Vocabulario emergente<span style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(255,181,70,.12)', border: '1px solid rgba(255,181,70,.3)', borderRadius: 999, color: 'var(--warn,#FFB546)', marginLeft: 6, display: 'inline-block', verticalAlign: 'middle' }}>DEMO</span></h3>
                 <div className="t-3" style={{ fontSize: 12 }}>Términos asociados · últimas 24h</div>
               </div>
             </div>
@@ -159,7 +159,7 @@ function SentimentTab({ politician }) {
         {/* Cross-platform breakdown */}
         <div className="card card-pad">
           <div className="section-h">
-            <h3>Sentimiento por plataforma</h3>
+            <h3>Sentimiento por plataforma<span style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(255,181,70,.12)', border: '1px solid rgba(255,181,70,.3)', borderRadius: 999, color: 'var(--warn,#FFB546)', marginLeft: 6, display: 'inline-block', verticalAlign: 'middle' }}>DEMO</span></h3>
             <span className="mono t-3" style={{ fontSize: 11 }}>comparativa · 7 días</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, background: 'var(--line-1)', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--line-1)' }}>
@@ -291,7 +291,7 @@ function MentionsTab({ politician }) {
             <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--line-1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-1)' }}>
               <div className="flex items-c gap-3">
                 <span className="dot live" />
-                <span className="mono" style={{ fontSize: 11, letterSpacing: '0.04em' }}>{filtered.length} menciones · ordenado por relevancia</span>
+                <span className="mono" style={{ fontSize: 11, letterSpacing: '0.04em' }}>{(filtered?.length ?? 0)} menciones · ordenado por relevancia</span>
               </div>
               <div className="flex items-c gap-2">
                 <button className="btn btn-ghost btn-sm"><Icon name="pause" size={12} /> Pausar stream</button>
@@ -300,7 +300,7 @@ function MentionsTab({ politician }) {
               </div>
             </div>
             <div>
-              {filtered.map((f, i) => <FeedRow key={f.id} f={f} delay={i * 40} />)}
+              {(filtered ?? []).map((f, i) => <FeedRow key={f.id} f={f} delay={i * 40} />)}
             </div>
             <div style={{ padding: '14px 20px', textAlign: 'center', borderTop: '1px solid var(--line-1)' }}>
               <button className="btn btn-sm">Cargar 50 menciones más <Icon name="arrow-down" size={12} /></button>
@@ -310,7 +310,7 @@ function MentionsTab({ politician }) {
           {/* Side panel: stats */}
           <div className="flex col gap-4">
             <div className="card card-pad">
-              <div className="mono t-3" style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>Volumen 24h</div>
+              <div className="mono t-3" style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>Volumen 24h<span style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(255,181,70,.12)', border: '1px solid rgba(255,181,70,.3)', borderRadius: 999, color: 'var(--warn,#FFB546)', marginLeft: 6, display: 'inline-block', verticalAlign: 'middle' }}>DEMO</span></div>
               <div className="display" style={{ fontSize: 38, fontWeight: 500, letterSpacing: '-0.03em' }}>142,488</div>
               <Trend value={24.8} />
               <div style={{ marginTop: 16, marginLeft: -4, marginRight: -4 }}>
@@ -321,7 +321,7 @@ function MentionsTab({ politician }) {
 
             <div className="card card-pad">
               <div className="section-h">
-                <h3 style={{ fontSize: 13 }}>Top hashtags</h3>
+                <h3 style={{ fontSize: 13 }}>Top hashtags<span style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(255,181,70,.12)', border: '1px solid rgba(255,181,70,.3)', borderRadius: 999, color: 'var(--warn,#FFB546)', marginLeft: 6, display: 'inline-block', verticalAlign: 'middle' }}>DEMO</span></h3>
               </div>
               <div className="flex col gap-2">
                 {[
@@ -334,7 +334,7 @@ function MentionsTab({ politician }) {
                 ].map(([h, v, s]) => (
                   <div key={h} className="flex between items-c" style={{ fontSize: 12, padding: '4px 0' }}>
                     <span className="mono" style={{ color: s === 'pos' ? 'var(--teal)' : s === 'neg' ? 'var(--neg)' : 'var(--text-2)' }}>{h}</span>
-                    <span className="mono t-3" style={{ fontSize: 11 }}>{(v/1000).toFixed(1)}K</span>
+                    <span className="mono t-3" style={{ fontSize: 11 }}>{(typeof v === 'number' && !isNaN(v) ? (v/1000).toFixed(1) : '—')}K</span>
                   </div>
                 ))}
               </div>
@@ -342,7 +342,7 @@ function MentionsTab({ politician }) {
 
             <div className="card card-pad">
               <div className="section-h">
-                <h3 style={{ fontSize: 13 }}>Top voces</h3>
+                <h3 style={{ fontSize: 13 }}>Top voces<span style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(255,181,70,.12)', border: '1px solid rgba(255,181,70,.3)', borderRadius: 999, color: 'var(--warn,#FFB546)', marginLeft: 6, display: 'inline-block', verticalAlign: 'middle' }}>DEMO</span></h3>
               </div>
               <div className="flex col gap-3">
                 {[
@@ -407,6 +407,10 @@ function CriticsTab({ politician }) {
 
       <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* KPIs */}
+        <div className="mono t-3" style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: -8 }}>
+          Resumen de detección
+          <span style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(255,181,70,.12)', border: '1px solid rgba(255,181,70,.3)', borderRadius: 999, color: 'var(--warn,#FFB546)', marginLeft: 6, display: 'inline-block', verticalAlign: 'middle' }}>DEMO</span>
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
           <KPI label="CRÍTICOS ACTIVOS" value="412" delta={18.4} sparkData={[280,300,320,340,360,380,390,400,405,408,410,412]} accent="#FF4D6D" />
           <KPI label="REDES COORDINADAS" value="8" sub="detectadas" delta={4} deltaSuffix="" sparkData={[3,4,4,5,6,6,7,7,8,8,8,8]} accent="#A78BFA" />
@@ -437,15 +441,15 @@ function CriticsTab({ politician }) {
                 <span className="t-3 mono" style={{ fontSize: 11 }}>Cargando críticos…</span>
               </div>
             )}
-            {!state.loading && critics.length === 0 && (
+            {!state.loading && (critics?.length ?? 0) === 0 && (
               <div className="t-3 mono" style={{ padding: '20px 20px', fontSize: 11 }}>
                 Sin críticos detectados en la ventana actual.
               </div>
             )}
-            {critics.map((c, i) => (
+            {(critics ?? []).map((c, i) => (
               <div key={i} style={{
                 display: 'grid', gridTemplateColumns: '36px 2fr 1fr 1fr 1fr 36px',
-                padding: '14px 20px', borderBottom: i === critics.length - 1 ? 'none' : '1px solid var(--line-1)',
+                padding: '14px 20px', borderBottom: i === (critics?.length ?? 0) - 1 ? 'none' : '1px solid var(--line-1)',
                 alignItems: 'center',
                 cursor: 'pointer',
                 transition: 'background 120ms var(--ease)',
@@ -454,7 +458,7 @@ function CriticsTab({ politician }) {
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                 <div className="mono t-3" style={{ fontSize: 12 }}>{String(i+1).padStart(2,'0')}</div>
                 <div className="flex items-c gap-3" style={{ minWidth: 0 }}>
-                  <Avatar initials={c.network ? '##' : c.name.slice(0,2)} size={32} gradient={c.suspicious ? 'linear-gradient(135deg, #FF4D6D, #FFB546)' : c.network ? 'linear-gradient(135deg, #A78BFA, #FF4D6D)' : 'linear-gradient(135deg, #6B7794, #3D4660)'} />
+                  <Avatar initials={c.network ? '##' : ((c?.name ?? '').slice(0,2) || '··')} size={32} gradient={c.suspicious ? 'linear-gradient(135deg, #FF4D6D, #FFB546)' : c.network ? 'linear-gradient(135deg, #A78BFA, #FF4D6D)' : 'linear-gradient(135deg, #6B7794, #3D4660)'} />
                   <div style={{ minWidth: 0 }}>
                     <div className="flex items-c gap-2">
                       <span style={{ fontSize: 13, fontWeight: 500 }}>{c.name}</span>
@@ -495,6 +499,7 @@ function CriticsTab({ politician }) {
               <div className="flex items-c gap-2" style={{ marginBottom: 10 }}>
                 <Icon name="warning" size={13} style={{ color: 'var(--neg)' }} />
                 <span className="mono t-2" style={{ fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Patrón detectado</span>
+                <span style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(255,181,70,.12)', border: '1px solid rgba(255,181,70,.3)', borderRadius: 999, color: 'var(--warn,#FFB546)', marginLeft: 6, display: 'inline-block', verticalAlign: 'middle' }}>DEMO</span>
               </div>
               <div className="flex col gap-2 t-2" style={{ fontSize: 12 }}>
                 <div>· 12 cuentas publicaron 84 mensajes en ventana de <b>14 minutos</b></div>

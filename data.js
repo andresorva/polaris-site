@@ -37,10 +37,41 @@
   }
 
   // Mapea una row de politicians del API al shape del mock
+  // Acepta AMBAS formas del backend:
+  //   - GET /politicians/{id} -> { ..., metrics: { ppi: { ppi_score, components:{...} }, sov_24h, ... } }
+  //   - shape legacy donde ppi.score venía a nivel raíz
   function _mapPolitician(p, metrics) {
     const m = metrics || (p && p.metrics) || {};
-    const ppi = m.ppi || {};
-    const sov = m.sov_24h || 0;
+    const ppiObj = (m && m.ppi) || {};
+
+    // Score puede venir como ppi_score, score, o m.ppi_score
+    const ppiScoreRaw = (typeof ppiObj.ppi_score === 'number') ? ppiObj.ppi_score
+                      : (typeof ppiObj.score === 'number') ? ppiObj.score
+                      : (typeof m.ppi_score === 'number') ? m.ppi_score
+                      : null;
+    const ppiScore = (typeof ppiScoreRaw === 'number' && !isNaN(ppiScoreRaw))
+      ? Math.round(ppiScoreRaw) : null;
+
+    // Sentiment normalizado (0..100) para el indicador de sentiment de la card
+    const sentNorm = (ppiObj.components && typeof ppiObj.components.sentiment_normalized === 'number')
+      ? ppiObj.components.sentiment_normalized
+      : null;
+
+    // Mention count real — NUNCA usar sov_24h como conteo
+    const mentionCount = (ppiObj.components && typeof ppiObj.components.mention_count === 'number')
+      ? ppiObj.components.mention_count
+      : (typeof m.mention_count_24h === 'number') ? m.mention_count_24h
+      : (typeof m.mentions_24h === 'number') ? m.mentions_24h
+      : null;
+
+    // SOV ya es porcentaje 0..100
+    const sov = (typeof m.sov_24h === 'number') ? m.sov_24h : null;
+
+    // Momentum
+    const momentum = (typeof ppiObj.momentum === 'number') ? ppiObj.momentum
+                   : (typeof m.momentum === 'number') ? m.momentum
+                   : 0;
+
     return {
       id: p.id,                                  // UUID real
       slug: p.slug,
@@ -51,12 +82,14 @@
       region: p.country === 'MX' ? 'México' : (p.country || '—'),
       color: _colorFor(p.slug || p.id),
       // Metricas live cuando vienen
-      sentiment: typeof ppi.score === 'number' ? Math.round(ppi.score) : null,
-      mentions: typeof sov === 'number' && sov > 0
-        ? (sov >= 1000 ? `${(sov / 1000).toFixed(1)}K` : String(sov))
+      sentiment: ppiScore,                       // PPI 0..100 (legacy field)
+      sentimentNorm: sentNorm,                   // 0..100 para indicador sentiment
+      mentions: (mentionCount != null)
+        ? (mentionCount >= 1000 ? `${(mentionCount / 1000).toFixed(1)}K` : String(mentionCount))
         : '—',
-      trend: ppi.momentum > 0 ? 'up' : ppi.momentum < 0 ? 'down' : 'flat',
-      trendDelta: typeof ppi.momentum === 'number' ? ppi.momentum : 0,
+      sov: (typeof sov === 'number') ? `${sov.toFixed(1)}%` : '—',
+      trend: momentum > 0 ? 'up' : momentum < 0 ? 'down' : 'flat',
+      trendDelta: momentum,
       handle: (p.social_handles && (p.social_handles.twitter || p.social_handles.instagram)) || '',
       lastActive: 'live',
       _raw: p,
@@ -70,6 +103,11 @@
   function _fallback(mockData, error) {
     if (CFG.DEBUG) console.warn('[polaris] usando datos demo:', error && error.message);
     return { data: mockData, error: error && error.message || 'unknown', isFallback: true, loading: false };
+  }
+
+  // FastAPI a veces devuelve { detail: "..." } incluso con status 200 — tratarlo como error
+  function _isFastapiError(x) {
+    return x && typeof x === 'object' && typeof x.detail === 'string' && !Array.isArray(x);
   }
 
   // === Loaders publicos ===
@@ -100,6 +138,10 @@
     }
     try {
       const det = await api.getPolitician(id);
+      if (_isFastapiError(det)) {
+        const m = (window.POLITICIANS_MOCK || [])[0];
+        return _fallback(m, new Error(det.detail));
+      }
       return _wrap(_mapPolitician(det, det.metrics));
     } catch (err) {
       const m = (window.POLITICIANS_MOCK || [])[0];
@@ -111,6 +153,7 @@
     if (!_isUuid(id)) return _fallback(_mockPPI(id), new Error('not a real id'));
     try {
       const ppi = await api.getPPI(id);
+      if (_isFastapiError(ppi)) return _fallback(_mockPPI(id), new Error(ppi.detail));
       return _wrap(ppi);
     } catch (err) {
       return _fallback(_mockPPI(id), err);
@@ -131,6 +174,7 @@
     if (!_isUuid(id)) return _fallback(_mockBreakdown(), new Error('not a real id'));
     try {
       const data = await api.getSentimentBreakdown(id, opts);
+      if (_isFastapiError(data)) return _fallback(_mockBreakdown(), new Error(data.detail));
       return _wrap(data);
     } catch (err) {
       return _fallback(_mockBreakdown(), err);
@@ -148,22 +192,36 @@
     };
   }
 
+  function _mapAuthor(a) {
+    const count = (typeof a.count === 'number') ? a.count : 0;
+    const pctNeg = (typeof a.pct_negative === 'number') ? a.pct_negative : 0;
+    const negative = (typeof a.negative === 'number') ? a.negative : 0;
+    return {
+      name: a.author || '—',
+      handle: a.author || '',
+      followers: '—',
+      mentions: count,                         // shape nuevo
+      volume: count,                           // legacy
+      pctNegative: pctNeg,                     // shape nuevo
+      negative: negative,
+      intensity: pctNeg,                       // legacy
+      platforms: Array.isArray(a.platforms) ? a.platforms : [],
+      trend: 'stable',
+      sample: `${count} menciones · ${pctNeg}% negativas`,
+      suspicious: pctNeg > 70,
+    };
+  }
+
   async function loadTopAuthors(id, opts) {
     if (!_isUuid(id)) return _fallback(_mockTopAuthors(), new Error('not a real id'));
     try {
       const data = await api.getTopAuthors(id, opts);
-      // mapear al shape de TOP_CRITICS_MOCK
-      const authors = (data.authors || []).map((a, i) => ({
-        name: a.author,
-        handle: a.author,
-        followers: '—',
-        volume: a.count,
-        intensity: a.pct_negative,
-        trend: a.pct_negative > 50 ? 'up' : 'flat',
-        sample: `${a.count} menciones · ${a.pct_negative}% negativas`,
-        suspicious: a.pct_negative > 70,
-        platforms: a.platforms,
-      }));
+      if (_isFastapiError(data)) return _fallback(_mockTopAuthors(), new Error(data.detail));
+      // Aceptar tanto { authors: [...] } como [...] directo
+      const list = Array.isArray(data) ? data
+                 : (data && Array.isArray(data.authors)) ? data.authors
+                 : [];
+      const authors = list.map(_mapAuthor);
       return _wrap(authors);
     } catch (err) {
       return _fallback(_mockTopAuthors(), err);
@@ -257,23 +315,50 @@
     }
   }
 
+  function _mapTopic(t) {
+    const count = (typeof t.count === 'number') ? t.count : 0;
+    const sentAvg = (typeof t.sentiment_avg === 'number') ? t.sentiment_avg : 0;
+    return {
+      name: t.topic || '—',
+      topic: t.topic,                          // alias
+      count: count,
+      mentions: count,                         // alias para tabs que usan 'mentions'
+      sentiment: sentAvg,
+      sentiment_avg: sentAvg,
+      delta: 0,                                // backend aún no provee trend pct
+      trend: t.trend || 'stable',
+    };
+  }
+
   async function loadTopics(id, opts) {
-    if (!_isUuid(id)) return _fallback({ topics: [] }, new Error('not a real id'));
+    if (!_isUuid(id)) return _fallback([], new Error('not a real id'));
     try {
       const data = await api.getTopics(id, opts);
-      return _wrap(data);
+      if (_isFastapiError(data)) return _fallback([], new Error(data.detail));
+      const list = Array.isArray(data) ? data
+                 : (data && Array.isArray(data.topics)) ? data.topics
+                 : [];
+      const topics = list.map(_mapTopic);
+      return _wrap(topics);
     } catch (err) {
-      return _fallback({ topics: [] }, err);
+      return _fallback([], err);
     }
   }
 
   async function loadCrisisSignals(id, opts) {
-    if (!_isUuid(id)) return _fallback({ has_active_crisis: false, signals: [] }, new Error('not a real id'));
+    const _emptyCrisis = { signals: [], hasActiveCrisis: false, signalCount: 0 };
+    if (!_isUuid(id)) return _fallback(_emptyCrisis, new Error('not a real id'));
     try {
       const data = await api.getCrisisSignals(id, opts);
-      return _wrap(data);
+      if (_isFastapiError(data)) return _fallback(_emptyCrisis, new Error(data.detail));
+      const signals = (data && Array.isArray(data.signals)) ? data.signals : [];
+      return _wrap({
+        signals: signals,
+        hasActiveCrisis: !!(data && data.has_active_crisis),
+        signalCount: (data && typeof data.signal_count === 'number') ? data.signal_count : signals.length,
+      });
     } catch (err) {
-      return _fallback({ has_active_crisis: false, signals: [] }, err);
+      return _fallback(_emptyCrisis, err);
     }
   }
 

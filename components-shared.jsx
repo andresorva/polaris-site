@@ -152,7 +152,8 @@ function Sparkline({ data, color = 'var(--teal)', height = 32, fill = true, widt
     const y = h - ((v - min) / range) * (h - 4) - 2;
     return [x, y];
   });
-  const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
+  const safeNum = (n) => (typeof n === 'number' && !isNaN(n) ? n.toFixed(1) : '0');
+  const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${safeNum(p?.[0])} ${safeNum(p?.[1])}`).join(' ');
   const fillPath = `${path} L${w} ${h} L0 ${h} Z`;
   const id = 'spark-' + Math.random().toString(36).slice(2, 8);
   return (
@@ -184,11 +185,12 @@ function AreaChart({ data, height = 220, showAxis = true }) {
   const xAt = (i) => padL + (i / (len - 1)) * innerW;
   const yAt = (v) => padT + innerH - (v / 100) * innerH;
 
+  const safeNum = (n) => (typeof n === 'number' && !isNaN(n) ? n.toFixed(1) : '0');
   const buildPath = (key) => {
-    return data.map((d, i) => `${i === 0 ? 'M' : 'L'}${xAt(i).toFixed(1)} ${yAt(d[key]).toFixed(1)}`).join(' ');
+    return data.map((d, i) => `${i === 0 ? 'M' : 'L'}${safeNum(xAt(i))} ${safeNum(yAt(d?.[key]))}`).join(' ');
   };
   const buildArea = (key) => {
-    return `${buildPath(key)} L${xAt(len-1).toFixed(1)} ${(padT + innerH).toFixed(1)} L${padL} ${(padT + innerH).toFixed(1)} Z`;
+    return `${buildPath(key)} L${safeNum(xAt(len-1))} ${safeNum(padT + innerH)} L${padL} ${safeNum(padT + innerH)} Z`;
   };
 
   return (
@@ -289,7 +291,7 @@ function Heatmap({ rows = 8, cols = 24, accent = '#2EE6C8' }) {
     <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 3 }}>
       {cells.map((c) => (
         <div key={`${c.r}-${c.c}`}
-             title={`r${c.r} h${c.c}: ${(c.v * 100).toFixed(0)}`}
+             title={`r${c.r} h${c.c}: ${(() => { const n = (c?.v ?? 0) * 100; return (typeof n === 'number' && !isNaN(n) ? n.toFixed(0) : '—'); })()}`}
              style={{
                aspectRatio: '1',
                borderRadius: 3,
@@ -303,8 +305,9 @@ function Heatmap({ rows = 8, cols = 24, accent = '#2EE6C8' }) {
 
 // --- Trend indicator ---
 function Trend({ value, suffix = '%' }) {
-  const up = value > 0;
-  const flat = value === 0;
+  const isValid = typeof value === 'number' && !isNaN(value);
+  const up = isValid && value > 0;
+  const flat = !isValid || value === 0;
   return (
     <span className="mono" style={{
       fontSize: 11,
@@ -319,7 +322,7 @@ function Trend({ value, suffix = '%' }) {
           <path d={up ? 'M2 8l4-4 4 4' : 'M2 4l4 4 4-4'} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       )}
-      {up && '+'}{value.toFixed(1)}{suffix}
+      {up && '+'}{isValid ? value.toFixed(1) : '—'}{suffix}
     </span>
   );
 }

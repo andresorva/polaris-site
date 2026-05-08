@@ -14,7 +14,7 @@
 function _renderMarkdown(md) {
   if (!md || typeof md !== 'string') return null;
 
-  const blocks = md.split(/\n\n+/);
+  const blocks = (md ?? '').split(/\n\n+/);
 
   const renderInline = (text) => {
     // Bold
@@ -34,8 +34,8 @@ function _renderMarkdown(md) {
     return parts.length > 0 ? parts : text;
   };
 
-  return blocks.map((block, i) => {
-    const trimmed = block.trim();
+  return (blocks ?? []).map((block, i) => {
+    const trimmed = (block ?? '').trim();
     if (!trimmed) return null;
     if (trimmed === '---') {
       return <hr key={i} style={{ border: 'none', borderTop: '1px solid var(--line-1)', margin: '24px 0' }} />;
@@ -65,14 +65,14 @@ function _renderMarkdown(md) {
     }
     // Listas
     if (/^\s*[-*]\s/.test(trimmed)) {
-      const items = trimmed.split(/\n/).filter(l => /^\s*[-*]\s/.test(l));
+      const items = (trimmed ?? '').split(/\n/).filter(l => /^\s*[-*]\s/.test(l));
       return (
         <ul key={i} style={{
           margin: '8px 0', paddingLeft: 18, color: 'var(--text-2)',
           lineHeight: 1.6, fontSize: 13,
         }}>
-          {items.map((it, j) => (
-            <li key={j}>{renderInline(it.replace(/^\s*[-*]\s/, ''))}</li>
+          {(items ?? []).map((it, j) => (
+            <li key={j}>{renderInline((it ?? '').replace(/^\s*[-*]\s/, ''))}</li>
           ))}
         </ul>
       );
@@ -162,14 +162,14 @@ function DailyBriefTab({ politician }) {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid var(--line-1)' }}>
               <div className="mono t-3" style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                {state.brief.brief_date} · Generado por {state.brief.generated_by_model || 'POLARIS'}
+                {state?.brief?.brief_date ?? '—'} · Generado por {state?.brief?.generated_by_model ?? 'POLARIS'}
               </div>
               <span className="pill teal" style={{ fontSize: 10 }}>
                 <span className="dot live" /> LISTO
               </span>
             </div>
             <div style={{ color: 'var(--text-2)' }}>
-              {_renderMarkdown(state.brief.full_brief_md || state.brief.executive_summary || '')}
+              {_renderMarkdown(state?.brief?.full_brief_md ?? state?.brief?.executive_summary ?? '')}
             </div>
           </div>
         )}

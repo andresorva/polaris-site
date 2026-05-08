@@ -132,6 +132,7 @@ function AgentsModal({ open, onClose }) {
         }}>
           <div className="flex between items-s gap-4">
             <div>
+              <div className="eyebrow" style={{color:'var(--warn,#FFB546)', marginBottom: 6}}>ARQUITECTURA · NO ES TELEMETRÍA EN VIVO</div>
               <div className="flex items-c gap-3" style={{ marginBottom: 16 }}>
                 <div style={{
                   display: 'inline-flex', alignItems: 'center', gap: 10,
@@ -179,13 +180,13 @@ function AgentsModal({ open, onClose }) {
             </button>
           </div>
 
-          {/* live stats strip */}
+          {/* architecture descriptors strip */}
           <div className="flex items-c gap-6 wrap" style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
             {[
-              ['Agentes activos', '9 / 9', '#2EE6C8'],
-              ['Procesando ahora', '12,847 menciones', '#4D7CFF'],
-              ['Latencia E2E', '11.4s', '#A78BFA'],
-              ['Decisiones / hora', '184', '#FFB546'],
+              ['Agentes en pipeline', '9', '#2EE6C8'],
+              ['Modelos', 'Sonnet 4.6 · Gemini 2.5 Pro/Flash', '#4D7CFF'],
+              ['Costo por mención', '~$0.001', '#A78BFA'],
+              ['Cobertura', '12 plataformas', '#FFB546'],
             ].map((s, i) => (
               <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span className="mono t-3" style={{ fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase' }}>{s[0]}</span>

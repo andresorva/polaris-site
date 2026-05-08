@@ -79,16 +79,17 @@ function OverviewTab({ politician, setTab }) {
   }, [politician.id, isLive]);
 
   // Valores efectivos: prefiere live cuando esté disponible
-  const sentimentValue = (live.ppi && live.ppi.ppi && typeof live.ppi.ppi.score === 'number')
+  const sentimentValue = (live?.ppi?.ppi && typeof live.ppi.ppi.score === 'number' && !isNaN(live.ppi.ppi.score))
     ? Math.round(live.ppi.ppi.score)
     : politician.sentiment;
-  const sovValue = live.ppi && typeof live.ppi.sov_24h === 'number'
-    ? (live.ppi.sov_24h >= 1000 ? `${(live.ppi.sov_24h / 1000).toFixed(1)}K` : String(live.ppi.sov_24h))
+  const sovRaw = live?.ppi?.sov_24h;
+  const sovValue = (typeof sovRaw === 'number' && !isNaN(sovRaw))
+    ? (sovRaw >= 1000 ? `${(sovRaw / 1000).toFixed(1)}K` : String(sovRaw))
     : politician.mentions;
-  const momentumValue = (live.ppi && live.ppi.momentum) || politician.trendDelta || 0;
+  const momentumValue = (live?.ppi?.momentum) ?? politician?.trendDelta ?? 0;
 
   // Breakdown real para el donut + barras horizontales
-  const br = (live.breakdown && live.breakdown.breakdown) || null;
+  const br = live?.breakdown?.breakdown ?? null;
 
   const series = React.useMemo(() => genSentimentSeries(politician.id.charCodeAt(0), sentimentValue || 50, 8, 30), [politician, sentimentValue]);
   const sparkA = [62,58,61,55,68,72,69,74,78,75,80,84];
@@ -118,7 +119,7 @@ function OverviewTab({ politician, setTab }) {
                sparkData={sparkA} accent="#2EE6C8" />
           <KPI label="MENCIONES 24H" value={live.loading ? '…' : sovValue} delta={24.8}
                sparkData={sparkB} accent="#4D7CFF" />
-          <KPI label="ALCANCE ESTIMADO" value="4.2M" delta={8.1}
+          <KPI label={<>ALCANCE ESTIMADO<span style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(255,181,70,.12)', border: '1px solid rgba(255,181,70,.3)', borderRadius: 999, color: 'var(--warn,#FFB546)', marginLeft: 6 }}>DEMO</span></>} value="4.2M" delta={8.1}
                sparkData={sparkC} accent="#A78BFA" />
           <KPI label="SHARE OF VOICE" value="38" sub="%" delta={6.2}
                sparkData={[28,30,32,34,33,36,38,37,39,38,40,38]} accent="#FFB546" />
@@ -168,9 +169,9 @@ function OverviewTab({ politician, setTab }) {
             </div>
             <div className="flex col gap-3" style={{ marginTop: 8 }}>
               {(br ? [
-                ['Positivo', br.pct ? br.pct.positive : 0, '#2EE6C8', String(br.positive || 0)],
-                ['Neutral', br.pct ? br.pct.neutral : 0, '#6B7794', String(br.neutral || 0)],
-                ['Negativo', br.pct ? br.pct.negative : 0, '#FF4D6D', String(br.negative || 0)],
+                ['Positivo', br?.pct?.positive ?? 0, '#2EE6C8', String(br?.positive ?? 0)],
+                ['Neutral', br?.pct?.neutral ?? 0, '#6B7794', String(br?.neutral ?? 0)],
+                ['Negativo', br?.pct?.negative ?? 0, '#FF4D6D', String(br?.negative ?? 0)],
               ] : [
                 ['Positivo', 62, '#2EE6C8', '88K'],
                 ['Neutral', 24, '#6B7794', '34K'],
@@ -203,7 +204,7 @@ function OverviewTab({ politician, setTab }) {
               </div>
             </div>
             <div style={{ padding: '4px 0' }}>
-              {FEED_ITEMS.slice(0, 5).map((f, i) => <FeedRow key={f.id} f={f} delay={i * 60} />)}
+              {(FEED_ITEMS ?? []).slice(0, 5).map((f, i) => <FeedRow key={f?.id ?? i} f={f} delay={i * 60} />)}
             </div>
             <div className="flex items-c gap-2" style={{ padding: '12px 20px', borderTop: '1px solid var(--line-1)', justifyContent: 'center' }}>
               <span className="dot live" /><span className="mono t-3" style={{ fontSize: 11 }}>Recibiendo nuevas menciones cada ~12 segundos</span>
@@ -221,7 +222,7 @@ function OverviewTab({ politician, setTab }) {
                     <Icon name="spark" size={14} />
                   </div>
                   <div className="grow">
-                    <div className="display" style={{ fontSize: 14, fontWeight: 500 }}>Inteligencia POLARIS</div>
+                    <div className="display" style={{ fontSize: 14, fontWeight: 500 }}>Inteligencia POLARIS<span style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(255,181,70,.12)', border: '1px solid rgba(255,181,70,.3)', borderRadius: 999, color: 'var(--warn,#FFB546)', marginLeft: 6 }}>DEMO</span></div>
                     <div className="mono t-3" style={{ fontSize: 10, letterSpacing: '0.06em' }}>generado hace 4 minutos</div>
                   </div>
                   <span className="pill purple">AI</span>
@@ -250,14 +251,14 @@ function OverviewTab({ politician, setTab }) {
                 <span className="mono t-3" style={{ fontSize: 11 }}>top 6</span>
               </div>
               <div className="flex col gap-2">
-                {TOPICS.map((t, i) => (
-                  <div key={t.name} className="flex items-c gap-3" style={{ padding: '8px 0', borderBottom: i === TOPICS.length - 1 ? 'none' : '1px solid var(--line-1)' }}>
+                {(TOPICS ?? []).map((t, i) => (
+                  <div key={t?.name ?? i} className="flex items-c gap-3" style={{ padding: '8px 0', borderBottom: i === ((TOPICS?.length ?? 0) - 1) ? 'none' : '1px solid var(--line-1)' }}>
                     <span className="mono t-3" style={{ fontSize: 10, width: 18 }}>{String(i + 1).padStart(2, '0')}</span>
                     <div className="grow" style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-1)' }}>{t.name}</div>
-                      <div className="t-3 mono" style={{ fontSize: 10 }}>{(t.mentions / 1000).toFixed(1)}K menciones · sent {t.sentiment}</div>
+                      <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-1)' }}>{t?.name ?? '—'}</div>
+                      <div className="t-3 mono" style={{ fontSize: 10 }}>{(typeof t?.mentions === 'number' && !isNaN(t.mentions) ? (t.mentions / 1000).toFixed(1) : '—')}K menciones · sent {t?.sentiment ?? '—'}</div>
                     </div>
-                    <Trend value={t.delta} suffix="%" />
+                    <Trend value={t?.delta ?? 0} suffix="%" />
                   </div>
                 ))}
               </div>
@@ -269,7 +270,7 @@ function OverviewTab({ politician, setTab }) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <div className="card card-pad">
             <div className="section-h">
-              <h3>Distribución geográfica</h3>
+              <h3>Distribución geográfica<span style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(255,181,70,.12)', border: '1px solid rgba(255,181,70,.3)', borderRadius: 999, color: 'var(--warn,#FFB546)', marginLeft: 6 }}>DEMO</span></h3>
               <span className="mono t-3" style={{ fontSize: 11 }}>menciones por estado · 24h</span>
             </div>
             <div className="flex col gap-3">
@@ -287,9 +288,9 @@ function OverviewTab({ politician, setTab }) {
                   <div key={name}>
                     <div className="flex between items-c" style={{ fontSize: 12, marginBottom: 5 }}>
                       <span style={{ fontWeight: 500 }}>{name}</span>
-                      <span className="mono t-3">{(v/1000).toFixed(1)}K · sent {sent}</span>
+                      <span className="mono t-3">{(typeof v === 'number' && !isNaN(v) ? (v/1000).toFixed(1) : '—')}K · sent {sent ?? '—'}</span>
                     </div>
-                    <HBar value={(v/max)*100} color={c} height={5} />
+                    <HBar value={(typeof v === 'number' && typeof max === 'number' && max > 0) ? (v/max)*100 : 0} color={c} height={5} />
                   </div>
                 );
               })}
@@ -298,7 +299,7 @@ function OverviewTab({ politician, setTab }) {
 
           <div className="card card-pad">
             <div className="section-h">
-              <h3>Actividad por hora · día</h3>
+              <h3>Actividad por hora · día<span style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(255,181,70,.12)', border: '1px solid rgba(255,181,70,.3)', borderRadius: 999, color: 'var(--warn,#FFB546)', marginLeft: 6 }}>DEMO</span></h3>
               <span className="mono t-3" style={{ fontSize: 11 }}>últimos 7 días · 24h</span>
             </div>
             <Heatmap rows={7} cols={24} />
@@ -326,7 +327,13 @@ function OverviewTab({ politician, setTab }) {
 }
 
 function FeedRow({ f, delay = 0 }) {
-  const sentColor = f.sentiment === 'pos' ? '#2EE6C8' : f.sentiment === 'neg' ? '#FF4D6D' : '#6B7794';
+  if (!f) return null;
+  const sentColor = f?.sentiment === 'pos' ? '#2EE6C8' : f?.sentiment === 'neg' ? '#FF4D6D' : '#6B7794';
+  const flags = f?.flags ?? [];
+  const likes = f?.engagement?.likes;
+  const shares = f?.engagement?.shares;
+  const replies = f?.engagement?.replies;
+  const score = f?.score;
   return (
     <div className="flex items-s gap-3" style={{
       padding: '14px 20px',
@@ -338,28 +345,28 @@ function FeedRow({ f, delay = 0 }) {
     onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-1)'}
     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
       <div style={{ position: 'relative', flexShrink: 0 }}>
-        <Avatar initials={f.avatar} size={34} />
+        <Avatar initials={f?.avatar} size={34} />
         <div style={{ position: 'absolute', bottom: -2, right: -2, width: 16, height: 16, borderRadius: 5, background: 'var(--bg-2)', border: '1px solid var(--line-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon name={f.platform === 'X' ? 'logo-x' : f.platform === 'TikTok' ? 'logo-tt' : f.platform === 'Instagram' ? 'logo-ig' : f.platform === 'Facebook' ? 'logo-fb' : 'logo-x'} size={9} />
+          <Icon name={f?.platform === 'X' ? 'logo-x' : f?.platform === 'TikTok' ? 'logo-tt' : f?.platform === 'Instagram' ? 'logo-ig' : f?.platform === 'Facebook' ? 'logo-fb' : 'logo-x'} size={9} />
         </div>
       </div>
       <div className="grow" style={{ minWidth: 0 }}>
         <div className="flex items-c gap-2 wrap" style={{ marginBottom: 3 }}>
-          <span style={{ fontSize: 13, fontWeight: 600 }}>{f.handle}</span>
-          <span className="mono t-3" style={{ fontSize: 11 }}>{f.user}</span>
+          <span style={{ fontSize: 13, fontWeight: 600 }}>{f?.handle ?? '—'}</span>
+          <span className="mono t-3" style={{ fontSize: 11 }}>{f?.user ?? ''}</span>
           <span className="t-4">·</span>
-          <span className="t-3" style={{ fontSize: 11 }}>{f.time}</span>
-          {f.flags.includes('verified') && <span className="pill blue" style={{ padding: '1px 6px', fontSize: 9 }}>✓ verificado</span>}
-          {f.flags.includes('viral') && <span className="pill amber" style={{ padding: '1px 6px', fontSize: 9 }}>VIRAL</span>}
-          {f.flags.includes('suspicious') && <span className="pill coral" style={{ padding: '1px 6px', fontSize: 9 }}>SOSPECHOSO</span>}
-          {f.flags.includes('coordinated') && <span className="pill purple" style={{ padding: '1px 6px', fontSize: 9 }}>COORD</span>}
+          <span className="t-3" style={{ fontSize: 11 }}>{f?.time ?? ''}</span>
+          {flags.includes('verified') && <span className="pill blue" style={{ padding: '1px 6px', fontSize: 9 }}>✓ verificado</span>}
+          {flags.includes('viral') && <span className="pill amber" style={{ padding: '1px 6px', fontSize: 9 }}>VIRAL</span>}
+          {flags.includes('suspicious') && <span className="pill coral" style={{ padding: '1px 6px', fontSize: 9 }}>SOSPECHOSO</span>}
+          {flags.includes('coordinated') && <span className="pill purple" style={{ padding: '1px 6px', fontSize: 9 }}>COORD</span>}
         </div>
-        <div className="t-1" style={{ fontSize: 13, lineHeight: 1.5 }}>{f.content}</div>
+        <div className="t-1" style={{ fontSize: 13, lineHeight: 1.5 }}>{f?.content ?? ''}</div>
         <div className="flex items-c gap-4" style={{ marginTop: 8 }}>
-          <span className="flex items-c gap-1 t-3 mono" style={{ fontSize: 11 }}><Icon name="heart" size={11} /> {(f.engagement.likes / 1000).toFixed(1)}K</span>
-          <span className="flex items-c gap-1 t-3 mono" style={{ fontSize: 11 }}><Icon name="reply" size={11} /> {f.engagement.replies}</span>
-          <span className="flex items-c gap-1 t-3 mono" style={{ fontSize: 11 }}><Icon name="share" size={11} /> {(f.engagement.shares / 1000).toFixed(1)}K</span>
-          <span className="flex items-c gap-1 t-3 mono" style={{ fontSize: 11 }}><Icon name="eye" size={11} /> {f.reach}</span>
+          <span className="flex items-c gap-1 t-3 mono" style={{ fontSize: 11 }}><Icon name="heart" size={11} /> {(typeof likes === 'number' && !isNaN(likes) ? (likes / 1000).toFixed(1) : '—')}K</span>
+          <span className="flex items-c gap-1 t-3 mono" style={{ fontSize: 11 }}><Icon name="reply" size={11} /> {replies ?? '—'}</span>
+          <span className="flex items-c gap-1 t-3 mono" style={{ fontSize: 11 }}><Icon name="share" size={11} /> {(typeof shares === 'number' && !isNaN(shares) ? (shares / 1000).toFixed(1) : '—')}K</span>
+          <span className="flex items-c gap-1 t-3 mono" style={{ fontSize: 11 }}><Icon name="eye" size={11} /> {f?.reach ?? '—'}</span>
         </div>
       </div>
       <div className="flex col items-c gap-2" style={{ flexShrink: 0 }}>
@@ -368,7 +375,7 @@ function FeedRow({ f, delay = 0 }) {
           color: sentColor,
           background: `${sentColor}15`,
           border: `1px solid ${sentColor}40`,
-        }}>{f.score > 0 ? '+' : ''}{f.score.toFixed(2)}</div>
+        }}>{(typeof score === 'number' && !isNaN(score)) ? `${score > 0 ? '+' : ''}${score.toFixed(2)}` : '—'}</div>
         <button className="btn btn-icon btn-sm btn-ghost"><Icon name="dots" size={14} /></button>
       </div>
     </div>

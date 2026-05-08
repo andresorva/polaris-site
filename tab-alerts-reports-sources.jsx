@@ -15,15 +15,18 @@
 function AlertsTab({ politician }) {
   const [filter, setFilter] = React.useState('all');
   const filters = [
-    { id: 'all', label: 'Todas', count: ALERTS.length },
-    { id: 'critical', label: 'Críticas', count: ALERTS.filter(a => a.severity === 'critical').length },
-    { id: 'warning', label: 'Advertencias', count: ALERTS.filter(a => a.severity === 'warning').length },
-    { id: 'info', label: 'Informativas', count: ALERTS.filter(a => a.severity === 'info').length },
+    { id: 'all', label: 'Todas', count: (ALERTS?.length ?? 0) },
+    { id: 'critical', label: 'Críticas', count: ((ALERTS ?? []).filter(a => a.severity === 'critical')?.length ?? 0) },
+    { id: 'warning', label: 'Advertencias', count: ((ALERTS ?? []).filter(a => a.severity === 'warning')?.length ?? 0) },
+    { id: 'info', label: 'Informativas', count: ((ALERTS ?? []).filter(a => a.severity === 'info')?.length ?? 0) },
   ];
-  const filtered = filter === 'all' ? ALERTS : ALERTS.filter(a => a.severity === filter);
+  const filtered = filter === 'all' ? (ALERTS ?? []) : (ALERTS ?? []).filter(a => a.severity === filter);
 
   return (
     <div className="fade-in">
+      <div className="demo-banner">
+        ⚠ Datos de demostración — endpoint backend en desarrollo
+      </div>
       <PageHeader
         politician={politician}
         title="Centro de alertas"
@@ -40,7 +43,7 @@ function AlertsTab({ politician }) {
       <div style={{ padding: 24, display: 'grid', gridTemplateColumns: '1fr 320px', gap: 16 }}>
         <div>
           <div className="flex items-c gap-1" style={{ padding: 3, background: 'var(--bg-2)', border: '1px solid var(--line-1)', borderRadius: 999, marginBottom: 16, width: 'fit-content' }}>
-            {filters.map(f => (
+            {(filters ?? []).map(f => (
               <button key={f.id} onClick={() => setFilter(f.id)} style={{
                 padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 500,
                 color: filter === f.id ? 'var(--text-1)' : 'var(--text-3)',
@@ -51,7 +54,7 @@ function AlertsTab({ politician }) {
           </div>
 
           <div className="flex col gap-3">
-            {filtered.map((a, i) => <AlertCard key={a.id} a={a} delay={i * 50} />)}
+            {(filtered ?? []).map((a, i) => <AlertCard key={a.id} a={a} delay={i * 50} />)}
           </div>
         </div>
 
@@ -63,14 +66,14 @@ function AlertsTab({ politician }) {
               <span className="mono t-3" style={{ fontSize: 11 }}>14</span>
             </div>
             <div className="flex col gap-2">
-              {[
+              {([
                 { name: 'Pico de menciones negativas', th: '+200% en 2h', sev: 'critical' },
                 { name: 'Cuenta verificada hostil', th: 'reach > 1M', sev: 'critical' },
                 { name: 'Hashtag emergente', th: '> 10K en 6h', sev: 'warning' },
                 { name: 'Red coordinada', th: 'score > 80', sev: 'critical' },
                 { name: 'Cobertura medios intl', th: 'top 50 medios', sev: 'info' },
                 { name: 'Spike geográfico', th: '+150% por estado', sev: 'warning' },
-              ].map((r, i) => (
+              ] ?? []).map((r, i) => (
                 <div key={i} style={{ padding: '10px 12px', background: 'var(--bg-1)', border: '1px solid var(--line-1)', borderRadius: 8 }}>
                   <div className="flex between items-c">
                     <span style={{ fontSize: 12, fontWeight: 500 }}>{r.name}</span>
@@ -87,13 +90,13 @@ function AlertsTab({ politician }) {
               <h3 style={{ fontSize: 13 }}>Canales de notificación</h3>
             </div>
             <div className="flex col gap-3">
-              {[
+              {([
                 ['Slack #campaña-alertas', 'Crítico + Advertencia', '#2EE6C8', true],
                 ['Email · Equipo digital', 'Solo críticas', '#4D7CFF', true],
                 ['SMS · Jefe de campaña', 'Solo críticas', '#FFB546', true],
                 ['Webhook · Dashboard custom', 'Todas', '#A78BFA', true],
                 ['WhatsApp interno', 'Inactivo', '#6B7794', false],
-              ].map((c, i) => (
+              ] ?? []).map((c, i) => (
                 <div key={i} className="flex items-c gap-3">
                   <span style={{ width: 8, height: 8, borderRadius: 999, background: c[2], opacity: c[3] ? 1 : 0.3 }} />
                   <div className="grow" style={{ minWidth: 0 }}>
@@ -157,6 +160,9 @@ function AlertCard({ a, delay = 0 }) {
 function ReportsTab({ politician }) {
   return (
     <div className="fade-in">
+      <div className="demo-banner">
+        ⚠ Datos de demostración — endpoint backend en desarrollo
+      </div>
       <PageHeader
         politician={politician}
         title="Reportes"
@@ -181,7 +187,7 @@ function ReportsTab({ politician }) {
 
         {/* Reports grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-          {REPORTS.map((r, i) => <ReportCard key={r.id} r={r} delay={i * 60} />)}
+          {(REPORTS ?? []).map((r, i) => <ReportCard key={r.id} r={r} delay={i * 60} />)}
           <button style={{
             minHeight: 280, border: '1.5px dashed var(--line-2)', borderRadius: 14,
             background: 'transparent',
@@ -208,14 +214,14 @@ function ReportsTab({ politician }) {
           <div style={{ position: 'relative' }}>
             <div style={{ position: 'absolute', left: 80, right: 0, top: 0, bottom: 0, borderLeft: '1px solid var(--line-1)' }} />
             <div className="flex col gap-3">
-              {[
+              {([
                 ['Hoy', '18:00', 'Reporte diario · Sentimiento general', 'auto', '#2EE6C8'],
                 ['Mañana', '09:00', 'Briefing matutino para jefe de campaña', 'auto', '#4D7CFF'],
                 ['Mié 23', '18:00', 'Reporte diario · Sentimiento general', 'auto', '#2EE6C8'],
                 ['Jue 24', '14:00', 'Análisis: cobertura post-cabildo', 'manual', '#A78BFA'],
                 ['Vie 25', '10:00', 'Reporte semanal completo', 'auto', '#FFB546'],
                 ['Lun 28', '09:00', 'Pre-evento: simulacro de prensa', 'manual', '#FF4D6D'],
-              ].map((s, i) => (
+              ] ?? []).map((s, i) => (
                 <div key={i} className="flex items-c gap-4">
                   <div style={{ width: 80, flexShrink: 0 }}>
                     <div className="mono" style={{ fontSize: 11, fontWeight: 500 }}>{s[0]}</div>
@@ -308,6 +314,9 @@ function SourcesTab({ politician }) {
   const totalVolume = '968K';
   return (
     <div className="fade-in">
+      <div className="demo-banner">
+        ⚠ Datos de demostración — endpoint backend en desarrollo
+      </div>
       <PageHeader
         politician={politician}
         title="Fuentes de datos"
@@ -326,7 +335,7 @@ function SourcesTab({ politician }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
           <KPI label="ACTIVAS" value="7" sub="/ 9" delta={0} deltaSuffix="" accent="#2EE6C8" />
           <KPI label="VOLUMEN DIARIO" value={totalVolume} delta={12.4} sparkData={[820,840,860,880,900,920,940,960,968]} accent="#4D7CFF" />
-          <KPI label="COSTO MENSUAL" value={`$${totalCost.toLocaleString()}`} sub="USD" delta={0} deltaSuffix="" accent="#A78BFA" />
+          <KPI label="COSTO MENSUAL" value={`$${typeof totalCost === 'number' && !isNaN(totalCost) ? totalCost.toLocaleString() : '—'}`} sub="USD" delta={0} deltaSuffix="" accent="#A78BFA" />
           <KPI label="UPTIME 30D" value="99.94" sub="%" delta={0.1} accent="#2EE6C8" />
         </div>
 
@@ -343,11 +352,11 @@ function SourcesTab({ politician }) {
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '36px 2fr 1fr 1fr 1fr 1fr 1.2fr 100px', padding: '10px 20px', borderBottom: '1px solid var(--line-1)', background: 'var(--bg-1)' }}>
-            {['', 'Plataforma', 'Estado', 'Volumen 24h', 'Latencia', 'Costo', 'Cobertura', ''].map((h, i) => (
+            {(['', 'Plataforma', 'Estado', 'Volumen 24h', 'Latencia', 'Costo', 'Cobertura', ''] ?? []).map((h, i) => (
               <div key={i} className="mono t-3" style={{ fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{h}</div>
             ))}
           </div>
-          {SOURCES.map((s, i) => <SourceRow key={s.name} s={s} last={i === SOURCES.length - 1} />)}
+          {(SOURCES ?? []).map((s, i) => <SourceRow key={s.name} s={s} last={i === (SOURCES?.length ?? 0) - 1} />)}
         </div>
 
         {/* Pipeline visualization + Health */}
@@ -367,14 +376,14 @@ function SourcesTab({ politician }) {
               <h3>Salud del sistema</h3>
             </div>
             <div className="flex col gap-3">
-              {[
+              {([
                 ['API Twitter v2', 99.9, '#2EE6C8', 'Operativo'],
                 ['Scraper TikTok', 98.2, '#FFB546', 'Lentitud detectada'],
                 ['IG Graph API', 99.7, '#2EE6C8', 'Operativo'],
                 ['Cola de procesamiento', 100, '#2EE6C8', 'Operativo'],
                 ['Modelo POLARIS-ES', 99.8, '#2EE6C8', 'Operativo'],
                 ['Almacenamiento S3', 100, '#2EE6C8', 'Operativo'],
-              ].map((h, i) => (
+              ] ?? []).map((h, i) => (
                 <div key={i}>
                   <div className="flex between items-c" style={{ marginBottom: 5, fontSize: 12 }}>
                     <span style={{ fontWeight: 500 }}>{h[0]}</span>
@@ -437,7 +446,7 @@ function Pipeline() {
   return (
     <div style={{ position: 'relative' }}>
       <div className="flex items-c" style={{ overflow: 'auto', paddingBottom: 8 }}>
-        {stages.map((st, i) => (
+        {(stages ?? []).map((st, i) => (
           <React.Fragment key={i}>
             <div style={{ flexShrink: 0, padding: 14, background: 'var(--bg-1)', border: '1px solid var(--line-2)', borderRadius: 12, minWidth: 130, textAlign: 'center' }}>
               <div style={{ width: 36, height: 36, borderRadius: 10, background: `${st.color}18`, border: `1px solid ${st.color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: st.color, margin: '0 auto 10px' }}>
@@ -446,7 +455,7 @@ function Pipeline() {
               <div className="mono t-3" style={{ fontSize: 9, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>{st.label}</div>
               <div className="display" style={{ fontSize: 14, fontWeight: 500, color: st.color }}>{st.count}</div>
             </div>
-            {i < stages.length - 1 && (
+            {i < (stages?.length ?? 0) - 1 && (
               <div style={{ flexShrink: 0, height: 2, width: 32, position: 'relative', overflow: 'hidden', background: 'var(--line-1)' }}>
                 <div style={{
                   position: 'absolute', inset: 0,
