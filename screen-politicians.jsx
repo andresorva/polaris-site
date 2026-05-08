@@ -249,18 +249,44 @@ function PoliticianCard({ p, onClick, delay }) {
           <span className="pill" style={{ fontSize: 10, padding: '3px 8px' }}>{p.region}</span>
         </div>
 
-        {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--line-1)' }}>
+        {/* KPIs con viñetas explicativas */}
+        <div className="kpi-grid-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--line-1)' }}>
+          {/* KPI 1 — PPI */}
           <div>
-            <div className="mono t-3" style={{ fontSize: 9, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Sentimiento</div>
+            <div className="mono t-3" style={{ fontSize: 9, letterSpacing: '0.08em', textTransform: 'uppercase' }}>PPI</div>
             <div className="flex items-c gap-2" style={{ marginTop: 6 }}>
-              <span className="display" style={{ fontSize: 22, fontWeight: 500, color: sentColor, letterSpacing: '-0.02em' }}>{p.sentiment}</span>
+              <span className="display" style={{ fontSize: 22, fontWeight: 500, color: sentColor, letterSpacing: '-0.02em' }}>{(p.sentiment ?? '—')}</span>
               <Trend value={p.trendDelta} />
             </div>
+            <ul className="kpi-bullets">
+              <li>Popularidad política, escala 0-100</li>
+              <li>Combina sentimiento, alcance y riesgo</li>
+              <li>100 = ideal · 50 = neutral · 0 = crisis</li>
+            </ul>
           </div>
+
+          {/* KPI 2 — Sentimiento */}
           <div>
-            <div className="mono t-3" style={{ fontSize: 9, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Menciones 24h</div>
+            <div className="mono t-3" style={{ fontSize: 9, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Sentimiento</div>
+            <div className="display" style={{ fontSize: 22, fontWeight: 500, marginTop: 6, letterSpacing: '-0.02em', color: sentColor }}>
+              {(typeof p.sentimentNorm === 'number' && !isNaN(p.sentimentNorm)) ? Math.round(p.sentimentNorm) : '—'}
+            </div>
+            <ul className="kpi-bullets">
+              <li>Emoción pública promedio en menciones</li>
+              <li>Detecta sarcasmo, ironía y matices</li>
+              <li>Análisis con AI generativa especializada</li>
+            </ul>
+          </div>
+
+          {/* KPI 3 — Menciones 60d */}
+          <div>
+            <div className="mono t-3" style={{ fontSize: 9, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Menciones 60d</div>
             <div className="display" style={{ fontSize: 22, fontWeight: 500, marginTop: 6, letterSpacing: '-0.02em' }}>{p.mentions}</div>
+            <ul className="kpi-bullets">
+              <li>Conversación total últimos 60 días</li>
+              <li>6 plataformas digitales monitoreadas</li>
+              <li>Recolección y análisis automatizado</li>
+            </ul>
           </div>
         </div>
 
@@ -277,6 +303,11 @@ function PoliticianCard({ p, onClick, delay }) {
             <span>{p.lastActive}</span>
           </div>
           <Icon name="arrow-r" size={14} style={{ color: 'var(--text-3)' }} />
+        </div>
+
+        {/* Sello técnico */}
+        <div className="kpi-techseal">
+          Análisis de 7 etapas: estadística, Machine Learning y AI generativa
         </div>
       </div>
 

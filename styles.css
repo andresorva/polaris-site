@@ -1062,3 +1062,52 @@ a { color: inherit; text-decoration: none; }
   align-items: center;
   gap: 8px;
 }
+
+/* Politician card — KPI explanatory bullets */
+.kpi-bullets {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-3);
+}
+.kpi-bullets li {
+  position: relative;
+  padding-left: 10px;
+  margin-bottom: 3px;
+}
+.kpi-bullets li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--text-4);
+}
+.kpi-bullets li:last-child {
+  margin-bottom: 0;
+}
+
+/* Politician card — sello técnico (footer disclaimer) */
+.kpi-techseal {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line-1);
+  font-size: 10px;
+  font-style: italic;
+  color: var(--text-4);
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+  text-align: center;
+}
+
+/* Politician card — mobile collapse 3 KPIs into 1 column */
+@media (max-width: 520px) {
+  .kpi-grid-3 {
+    grid-template-columns: 1fr !important;
+    gap: 18px !important;
+  }
+  .kpi-bullets {
+    font-size: 12px;
+  }
+}
