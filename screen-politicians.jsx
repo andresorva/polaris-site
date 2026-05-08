@@ -57,7 +57,7 @@ function PoliticiansScreen({ onNavigate, onSelectPolitician }) {
           <PolarisLogo size={20} />
           <div className="flex items-c gap-2 mono t-3" style={{ fontSize: 11, letterSpacing: '0.06em' }}>
             <span>WORKSPACE</span> <Icon name="caret" size={12} style={{ transform: 'rotate(-90deg)' }} />
-            <span className="t-2">Campaña VE 2024</span>
+            <span className="t-2">Campañas México 2026</span>
           </div>
         </div>
         <div className="flex items-c gap-3">
@@ -65,10 +65,10 @@ function PoliticiansScreen({ onNavigate, onSelectPolitician }) {
           <button className="btn btn-icon btn-sm"><Icon name="bell" size={15} /></button>
           <button className="btn btn-icon btn-sm"><Icon name="cog" size={15} /></button>
           <div style={{ width: 1, height: 24, background: 'var(--line-2)' }} />
-          <Avatar initials="MG" size={32} gradient="linear-gradient(135deg, #2EE6C8, #4D7CFF)" />
+          <Avatar initials="AO" size={32} gradient="linear-gradient(135deg, #2EE6C8, #4D7CFF)" />
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: 12, fontWeight: 500 }}>María González</span>
-            <span className="mono t-3" style={{ fontSize: 10 }}>Lead Analyst</span>
+            <span style={{ fontSize: 12, fontWeight: 500 }}>Andrés Orvañanos</span>
+            <span className="mono t-3" style={{ fontSize: 10 }}>Founder</span>
           </div>
         </div>
       </header>
@@ -212,7 +212,7 @@ function PoliticianCard({ p, onClick, delay }) {
       padding: 0, textAlign: 'left',
       cursor: 'pointer',
       animation: `pageIn 400ms var(--ease-out) ${delay}ms both`,
-      overflow: 'hidden',
+      overflow: 'visible',
       position: 'relative',
     }}>
       {/* Top accent */}
@@ -221,9 +221,11 @@ function PoliticianCard({ p, onClick, delay }) {
         background: `linear-gradient(135deg, ${p.color}22, ${p.color}08), linear-gradient(180deg, var(--bg-3), var(--bg-2))`,
         borderBottom: '1px solid var(--line-1)',
         position: 'relative',
-        overflow: 'hidden',
+        overflow: 'visible',
       }}>
-        <div className="grid-bg" style={{ position: 'absolute', inset: 0, opacity: 0.4 }} />
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+          <div className="grid-bg" style={{ position: 'absolute', inset: 0, opacity: 0.4 }} />
+        </div>
         <div style={{ position: 'absolute', top: 12, right: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
           <span className="dot live" />
           <span className="mono t-2" style={{ fontSize: 9, letterSpacing: '0.08em' }}>EN VIVO</span>

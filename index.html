@@ -63,8 +63,52 @@
 
   <!-- App root -->
   <script type="text/babel">
+    class ErrorBoundary extends React.Component {
+      constructor(props) {
+        super(props);
+        this.state = { hasError: false, error: null };
+      }
+      static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+      }
+      componentDidCatch(error, info) {
+        if (window.console && console.error) {
+          console.error('[ErrorBoundary]', error, info);
+        }
+      }
+      render() {
+        if (this.state.hasError) {
+          return React.createElement('div', {
+            className: 'card glass',
+            style: { padding: 32, margin: 24, textAlign: 'center' }
+          },
+            React.createElement('div', { className: 'eyebrow', style: { marginBottom: 8, color: 'var(--neg)' } }, '⚠ ERROR'),
+            React.createElement('div', { className: 'display', style: { fontSize: 20, marginBottom: 12 } }, 'Algo salió mal en este componente'),
+            React.createElement('div', { className: 'muted', style: { marginBottom: 16 } }, 'Recarga la página o vuelve al selector de políticos.'),
+            React.createElement('button', {
+              className: 'btn btn-primary',
+              onClick: () => window.location.reload()
+            }, 'Recargar')
+          );
+        }
+        return this.props.children;
+      }
+    }
+    window.ErrorBoundary = ErrorBoundary;
+
+    function isSessionValid() {
+      try {
+        const raw = localStorage.getItem('polaris_session');
+        if (!raw) return false;
+        const s = JSON.parse(raw);
+        return !!(s && typeof s.user === 'string' && ['andresorva', 'luisphr'].includes(s.user));
+      } catch {
+        return false;
+      }
+    }
+
     function App() {
-      const [screen, setScreen] = React.useState('landing');
+      const [screen, setScreen] = React.useState(isSessionValid() ? 'politicians' : 'landing');
       const [politician, setPolitician] = React.useState(POLITICIANS[0]);
 
       // Floating screen indicator (prototype helper)

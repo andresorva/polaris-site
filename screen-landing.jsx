@@ -473,7 +473,7 @@ function Hero({ onLogin }) {
         <div className="flex items-c gap-6" style={{ paddingTop: 24, borderTop: '1px solid var(--line-1)' }}>
           <div className="eyebrow">Operando para</div>
           <div className="flex items-c gap-8 wrap" style={{ flex: 1 }}>
-            {['CAMPAÑA-VE-24', 'OBSERVATORIO LATAM', 'PARTIDO-MX', 'GABINETE-CO', 'ANALISTA-AR', 'MEDIOS-CL'].map(n => (
+            {['CAMPAÑA-MX-26', 'OBSERVATORIO LATAM', 'PARTIDO-MX', 'GABINETE-MX', 'ANALISTA-MX', 'MEDIOS-MX'].map(n => (
               <span key={n} className="mono t-3" style={{ fontSize: 11, letterSpacing: '0.12em' }}>{n}</span>
             ))}
           </div>
@@ -742,7 +742,6 @@ function ContactSection({ onLogin }) {
                       <option>Colombia</option>
                       <option>Argentina</option>
                       <option>Chile</option>
-                      <option>Venezuela</option>
                       <option>Otro</option>
                     </select>
                   </div>
