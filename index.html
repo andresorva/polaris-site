@@ -111,14 +111,6 @@
       const [screen, setScreen] = React.useState(isSessionValid() ? 'politicians' : 'landing');
       const [politician, setPolitician] = React.useState(POLITICIANS[0]);
 
-      // Floating screen indicator (prototype helper)
-      const screens = [
-        { id: 'landing', label: 'Landing' },
-        { id: 'login', label: 'Login' },
-        { id: 'politicians', label: 'Selector' },
-        { id: 'dashboard', label: 'Dashboard' },
-      ];
-
       const Page = {
         landing: LandingPage,
         login: LoginScreen,
@@ -127,40 +119,11 @@
       }[screen];
 
       return (
-        <>
-          <Page
-            onNavigate={setScreen}
-            onSelectPolitician={setPolitician}
-            politician={politician}
-          />
-          {/* Prototype navigator */}
-          <div style={{
-            position: 'fixed', bottom: 16, left: '50%', transform: 'translateX(-50%)',
-            zIndex: 1000,
-            padding: 4,
-            background: 'rgba(10,14,26,0.92)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: 999,
-            display: 'flex', alignItems: 'center', gap: 2,
-            boxShadow: '0 12px 32px rgba(0,0,0,0.6)',
-            fontFamily: 'var(--font-mono)',
-          }}>
-            <span style={{ padding: '4px 10px', fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.1em' }}>SCREENS</span>
-            {screens.map((s, i) => (
-              <button key={s.id} onClick={() => setScreen(s.id)} style={{
-                padding: '6px 14px', borderRadius: 999,
-                fontSize: 11, fontWeight: 500, letterSpacing: '0.04em',
-                color: screen === s.id ? '#051410' : 'var(--text-2)',
-                background: screen === s.id ? '#2EE6C8' : 'transparent',
-                cursor: 'pointer', border: 'none',
-                transition: 'all 160ms var(--ease)',
-              }}>
-                <span style={{ opacity: 0.6, marginRight: 6 }}>{String(i+1).padStart(2,'0')}</span>{s.label}
-              </button>
-            ))}
-          </div>
-        </>
+        <Page
+          onNavigate={setScreen}
+          onSelectPolitician={setPolitician}
+          politician={politician}
+        />
       );
     }
 
