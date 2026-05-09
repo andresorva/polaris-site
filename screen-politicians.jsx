@@ -43,7 +43,14 @@ function PoliticiansScreen({ onNavigate, onSelectPolitician }) {
   };
 
   return (
-    <div className="page-in" data-screen-label="03 Politicians" style={{ minHeight: '100vh', background: 'var(--bg-0)' }}>
+    <div className="page-in" data-screen-label="03 Politicians" style={{
+      minHeight: '100vh',
+      height: '100vh',
+      background: 'var(--bg-0)',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+    }}>
       {/* Top bar */}
       <header style={{
         padding: '14px 32px',
@@ -54,7 +61,9 @@ function PoliticiansScreen({ onNavigate, onSelectPolitician }) {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div className="flex items-c gap-6">
-          <PolarisLogo size={20} />
+          <span onClick={() => typeof onNavigate === 'function' && onNavigate('landing')} style={{ cursor: 'pointer', display: 'inline-flex' }}>
+            <PolarisLogo size={20} />
+          </span>
           <div className="flex items-c gap-2 mono t-3" style={{ fontSize: 11, letterSpacing: '0.06em' }}>
             <span>WORKSPACE</span> <Icon name="caret" size={12} style={{ transform: 'rotate(-90deg)' }} />
             <span className="t-2">Campañas México 2026</span>
@@ -73,7 +82,7 @@ function PoliticiansScreen({ onNavigate, onSelectPolitician }) {
         </div>
       </header>
 
-      <main style={{ maxWidth: 1280, margin: '0 auto', padding: '40px 32px 80px' }}>
+      <main style={{ maxWidth: 1280, margin: '0 auto', padding: '40px 32px 80px', flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', width: '100%' }}>
         {/* Hero */}
         <div className="flex between items-s wrap gap-4" style={{ marginBottom: 40 }}>
           <div>
@@ -129,7 +138,7 @@ function PoliticiansScreen({ onNavigate, onSelectPolitician }) {
             ))}
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span className="mono t-3" style={{ fontSize: 11 }}>{filtered.length} de {POLITICIANS.length}</span>
+            <span className="mono t-3" style={{ fontSize: 11 }}>{filtered.length} de {(state.data || POLITICIANS).length}</span>
             <div className="flex items-c gap-1" style={{ padding: 3, background: 'var(--bg-2)', border: '1px solid var(--line-1)', borderRadius: 8 }}>
               <button onClick={() => setView('grid')} style={{ padding: 6, borderRadius: 6, color: view === 'grid' ? 'var(--text-1)' : 'var(--text-3)', background: view === 'grid' ? 'var(--bg-3)' : 'transparent' }}>
                 <Icon name="grid" size={14} />
