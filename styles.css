@@ -1467,3 +1467,179 @@ a { color: inherit; text-decoration: none; }
     overscroll-behavior-y: none;
   }
 }
+
+/* ============================================
+   POLARIS — Daily Brief content (Notion/Medium-style)
+   ============================================ */
+.brief-content {
+  color: var(--text-2);
+  font-size: 15px;
+  line-height: 1.7;
+  font-family: var(--font-body);
+}
+
+.brief-content h1,
+.brief-content h2,
+.brief-content h3,
+.brief-content h4 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: var(--text-1);
+  line-height: 1.25;
+}
+
+.brief-content h1 {
+  font-size: 28px;
+  margin: 28px 0 16px;
+  letter-spacing: -0.02em;
+}
+
+.brief-content h2 {
+  font-size: 22px;
+  margin: 32px 0 12px;
+  color: var(--teal);
+  letter-spacing: -0.015em;
+}
+
+.brief-content h3 {
+  font-size: 18px;
+  margin: 24px 0 10px;
+}
+
+.brief-content h4 {
+  font-size: 15px;
+  margin: 20px 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+}
+
+.brief-content p {
+  margin: 0 0 16px;
+  max-width: 65ch;
+}
+
+.brief-content strong {
+  color: var(--text-1);
+  font-weight: 600;
+}
+
+.brief-content em {
+  color: var(--text-1);
+  font-style: italic;
+}
+
+.brief-content a {
+  color: var(--teal);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(46, 230, 200, 0.4);
+  transition: border-color 200ms var(--ease);
+}
+.brief-content a:hover {
+  border-bottom-color: var(--teal);
+}
+
+.brief-content ul,
+.brief-content ol {
+  margin: 12px 0 18px;
+  padding-left: 22px;
+  max-width: 65ch;
+}
+
+.brief-content li {
+  margin-bottom: 8px;
+  line-height: 1.65;
+}
+
+.brief-content li::marker {
+  color: var(--teal);
+}
+
+.brief-content blockquote {
+  margin: 20px 0;
+  padding: 12px 18px;
+  border-left: 3px solid var(--teal);
+  background: rgba(46, 230, 200, 0.06);
+  color: var(--text-1);
+  font-style: italic;
+  border-radius: 0 8px 8px 0;
+}
+
+.brief-content blockquote p {
+  margin-bottom: 0;
+}
+
+.brief-content code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 2px 6px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-1);
+  border-radius: 4px;
+  color: var(--text-1);
+}
+
+.brief-content pre {
+  margin: 16px 0;
+  padding: 16px 18px;
+  background: var(--bg-1);
+  border: 1px solid var(--line-1);
+  border-radius: 10px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.brief-content pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.brief-content table {
+  width: 100%;
+  margin: 18px 0;
+  border-collapse: collapse;
+  font-size: 13px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line-1);
+}
+
+.brief-content th,
+.brief-content td {
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--line-1);
+}
+
+.brief-content th {
+  background: var(--bg-2);
+  color: var(--text-1);
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+.brief-content tr:last-child td {
+  border-bottom: none;
+}
+
+.brief-content hr {
+  border: none;
+  border-top: 1px solid var(--line-1);
+  margin: 28px 0;
+}
+
+@media (max-width: 768px) {
+  .brief-content { font-size: 14px; line-height: 1.65; }
+  .brief-content h1 { font-size: 24px; }
+  .brief-content h2 { font-size: 19px; }
+  .brief-content h3 { font-size: 16px; }
+  .brief-content pre { padding: 12px; font-size: 12px; }
+  .brief-content table { font-size: 12px; }
+  .brief-content th, .brief-content td { padding: 8px 10px; }
+}
