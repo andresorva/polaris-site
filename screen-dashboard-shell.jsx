@@ -384,6 +384,7 @@ function DashboardScreen({ politician, onNavigate, onSelectPolitician }) {
   const [autoRefresh, setAutoRefresh] = React.useState(true);
   const isMobile = useIsMobile();
   const { toast, show: showToast } = useToast();
+  const [liveQueryParams, setLiveQueryParams] = React.useState(null);
   const handleShare = React.useCallback(async () => {
     if (typeof haptic === 'function') haptic('light');
     const result = await sharePolaris({
@@ -498,6 +499,7 @@ function DashboardScreen({ politician, onNavigate, onSelectPolitician }) {
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         <DashboardSidebar activeTab={tab} setTab={setTab} onClose={() => setSidebarOpen(false)} />
         <main ref={mainRef} style={{ flex: 1, overflow: 'auto', minWidth: 0 }}>
+          <LiveQuerySearch politicianId={politician.id} onResult={(params) => setLiveQueryParams(params)} />
           {TabPane && (
             <ErrorBoundary>
               <TabPane key={`${politician.id}-${tab}`} politician={politician} setTab={setTab} refreshTick={refreshTick} />
@@ -506,6 +508,13 @@ function DashboardScreen({ politician, onNavigate, onSelectPolitician }) {
         </main>
       </div>
       <Toast message={toast?.message} />
+      {liveQueryParams && (
+        <LiveQueryResults
+          politicianId={politician.id}
+          params={liveQueryParams}
+          onClose={() => setLiveQueryParams(null)}
+        />
+      )}
     </div>
   );
 }

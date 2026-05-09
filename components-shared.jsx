@@ -546,6 +546,240 @@ function ExpandableChart({ title, description, children }) {
 
 
 
+
+// --- Live Query MVP (Día 5 Ronda 4 — feature CORE) ---
+function LiveQuerySearch({ politicianId, onResult }) {
+  const [query, setQuery] = React.useState('');
+  const [open, setOpen] = React.useState(false);
+  const [recentQueries, setRecentQueries] = React.useState(() => {
+    try { return JSON.parse(localStorage.getItem('polaris_live_queries') || '[]'); }
+    catch { return []; }
+  });
+  const [platforms, setPlatforms] = React.useState({
+    twitter_unofficial: true, instagram: true, tiktok: true,
+    youtube: true, bluesky: true,
+  });
+  const [timeRange, setTimeRange] = React.useState('24h');
+  const [running, setRunning] = React.useState(false);
+
+  const submit = async (e) => {
+    e?.preventDefault?.();
+    if (!query.trim() || !politicianId || running) return;
+    if (typeof haptic === 'function') haptic('medium');
+    const newRecent = [query.trim(), ...recentQueries.filter(q => q !== query.trim())].slice(0, 8);
+    setRecentQueries(newRecent);
+    try { localStorage.setItem('polaris_live_queries', JSON.stringify(newRecent)); } catch {}
+    setRunning(true);
+    setOpen(false);
+    if (typeof onResult === 'function') {
+      onResult({
+        query: query.trim(),
+        platforms: Object.keys(platforms).filter(k => platforms[k]),
+        time_range: timeRange,
+      });
+    }
+    setRunning(false);
+  };
+
+  return (
+    <form onSubmit={submit} className="live-query-search" role="search">
+      <div className="live-query-input-wrap">
+        <Icon name="search" size={16} style={{ color: 'var(--text-3)' }} />
+        <input
+          className="live-query-input"
+          placeholder="🔍 Busca lo que la gente dice ahora mismo..."
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 180)}
+        />
+        <button type="submit" className="btn btn-primary btn-sm live-query-go" disabled={!query.trim() || running}>
+          🚀 {running ? 'Buscando…' : 'Buscar AHORA'}
+        </button>
+      </div>
+      <div className="live-query-meta">
+        <span className="mono t-3" style={{ fontSize: 10 }}>≈ $0.18 USD por búsqueda · 6 plataformas · streaming &lt;60s</span>
+      </div>
+      {open && recentQueries.length > 0 && !query && (
+        <div className="live-query-suggestions">
+          <div className="mono t-3" style={{ fontSize: 9, padding: '4px 12px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Búsquedas recientes</div>
+          {recentQueries.map((q, i) => (
+            <button key={i} type="button" className="live-query-suggestion"
+                    onMouseDown={() => { setQuery(q); setTimeout(() => submit(), 30); }}>
+              <Icon name="history" size={12} />
+              <span>{q}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </form>
+  );
+}
+
+function LiveQueryResults({ politicianId, params, onClose }) {
+  const [events, setEvents] = React.useState({
+    started: false, mentions: [], totalCollected: 0,
+    sentimentAvg: null, topTopics: [], summary: '',
+    error: null, complete: false, elapsed: 0,
+    sentimentProcessed: 0, sentimentTotal: 0,
+  });
+  const startTimeRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!params || !politicianId) return;
+    startTimeRef.current = Date.now();
+    setEvents(s => ({ ...s, started: true }));
+
+    const apiBase = (window.POLARIS_CONFIG && window.POLARIS_CONFIG.API_BASE_URL) || '';
+    const url = `${apiBase}/api/v1/live-query`;
+    let abort = false;
+
+    (async () => {
+      try {
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+          body: JSON.stringify({ politician_id: politicianId, ...params }),
+        });
+        if (!resp.ok || !resp.body) {
+          setEvents(s => ({ ...s, error: `HTTP ${resp.status}` }));
+          return;
+        }
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (!abort) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const events_ = buffer.split('\n\n');
+          buffer = events_.pop() || '';
+          for (const evt of events_) {
+            const lines = evt.split('\n');
+            const eventType = lines.find(l => l.startsWith('event: '))?.slice(7) || 'message';
+            const dataLine = lines.find(l => l.startsWith('data: '));
+            if (!dataLine) continue;
+            let payload = {};
+            try { payload = JSON.parse(dataLine.slice(6)); } catch {}
+            setEvents(s => {
+              const next = { ...s, elapsed: ((Date.now() - startTimeRef.current) / 1000) };
+              if (eventType === 'mention_found') {
+                next.mentions = [...s.mentions, payload].slice(0, 30);
+              } else if (eventType === 'collectors_done') {
+                next.totalCollected = payload.total ?? s.totalCollected;
+              } else if (eventType === 'sentiment_progress') {
+                next.sentimentProcessed = payload.processed ?? 0;
+                next.sentimentTotal = payload.total ?? 0;
+              } else if (eventType === 'complete') {
+                next.complete = true;
+                next.totalCollected = payload.total ?? next.totalCollected;
+                next.sentimentAvg = payload.sentiment_avg ?? null;
+                next.topTopics = payload.top_topics || [];
+                next.summary = payload.summary_md || '';
+              } else if (eventType === 'error') {
+                next.error = payload.message || 'Error';
+              }
+              return next;
+            });
+            if (eventType === 'complete' || eventType === 'error') {
+              if (typeof haptic === 'function') haptic('medium');
+            }
+          }
+        }
+      } catch (e) {
+        if (!abort) setEvents(s => ({ ...s, error: e.message || 'Error de red' }));
+      }
+    })();
+
+    return () => { abort = true; };
+  }, [politicianId, params]);
+
+  const summaryHtml = React.useMemo(() => {
+    if (!events.summary) return '';
+    if (window.marked && window.marked.parse) {
+      try { return window.marked.parse(events.summary, { breaks: true, gfm: true }); }
+      catch { return events.summary; }
+    }
+    return events.summary;
+  }, [events.summary]);
+
+  return (
+    <>
+      <div className="expandable-chart-backdrop" onClick={onClose} aria-hidden="true" />
+      <div className="expandable-chart-modal" role="dialog" aria-label="Live Query resultados" style={{ width: 'min(95vw, 1100px)' }}>
+        <div className="expandable-chart-modal-header">
+          <div>
+            <div className="display" style={{ fontSize: 18, fontWeight: 500 }}>Live Query: <span style={{ color: 'var(--teal)' }}>"{params.query}"</span></div>
+            <div className="t-3 mono" style={{ fontSize: 11, marginTop: 4 }}>
+              {events.totalCollected} mentions · {events.elapsed.toFixed(1)}s elapsed
+            </div>
+          </div>
+          <button className="expandable-chart-close" onClick={onClose} aria-label="Cerrar"><Icon name="x" size={20} /></button>
+        </div>
+        <div className="expandable-chart-modal-body" style={{ flexDirection: 'column', alignItems: 'stretch', display: 'flex' }}>
+          {events.error && (
+            <div className="card card-pad" style={{ padding: 18, borderColor: 'var(--neg)', background: 'rgba(255,77,109,0.06)' }}>
+              <div className="flex items-c gap-2">
+                <Icon name="warning" size={14} style={{ color: 'var(--neg)' }} />
+                <div className="t-2" style={{ fontSize: 13 }}>{events.error}</div>
+              </div>
+              <div className="t-3 mono" style={{ fontSize: 11, marginTop: 8 }}>
+                El backend Live Query requiere API keys completas en producción. Si ves este error en demo, el endpoint aún no está disponible.
+              </div>
+            </div>
+          )}
+          {!events.error && !events.complete && (
+            <div className="card card-pad" style={{ padding: 18, marginBottom: 16 }}>
+              <div className="flex items-c gap-2" style={{ marginBottom: 8 }}>
+                <span className="dot live" />
+                <div className="t-2" style={{ fontSize: 13 }}>
+                  {events.totalCollected === 0 ? 'Buscando en plataformas…' :
+                   events.sentimentTotal === 0 ? `${events.totalCollected} mentions · iniciando análisis…` :
+                   `${events.sentimentProcessed}/${events.sentimentTotal} mentions analizadas`}
+                </div>
+              </div>
+              <div style={{ height: 4, background: 'var(--bg-3)', borderRadius: 999, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: events.sentimentTotal > 0 ? `${(events.sentimentProcessed / events.sentimentTotal) * 100}%` : '15%',
+                  background: 'var(--teal)',
+                  transition: 'width 240ms var(--ease)',
+                }} />
+              </div>
+            </div>
+          )}
+          {events.summary && (
+            <div className="card card-pad" style={{ padding: 24, marginBottom: 16 }}>
+              <div className="brief-content" dangerouslySetInnerHTML={{ __html: summaryHtml }} />
+            </div>
+          )}
+          {events.topTopics.length > 0 && (
+            <div className="flex items-c gap-2" style={{ flexWrap: 'wrap', marginBottom: 16 }}>
+              {events.topTopics.map((t, i) => (
+                <span key={i} className="pill teal" style={{ fontSize: 11 }}>{t}</span>
+              ))}
+            </div>
+          )}
+          {events.mentions.length > 0 && (
+            <div className="card card-pad" style={{ padding: 0, overflow: 'hidden' }}>
+              <div className="mono t-3" style={{ fontSize: 10, padding: '12px 16px', letterSpacing: '0.1em', textTransform: 'uppercase', borderBottom: '1px solid var(--line-1)' }}>Top {Math.min(events.mentions.length, 10)} mentions</div>
+              {events.mentions.slice(0, 10).map((m, i) => (
+                <div key={i} style={{ padding: '12px 16px', borderBottom: i < 9 ? '1px solid var(--line-1)' : 'none', display: 'flex', gap: 10 }}>
+                  <PlatformChip platform={m.platform} size={20} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="t-3 mono" style={{ fontSize: 10, marginBottom: 2 }}>{m.author || '—'}</div>
+                    <div className="t-2" style={{ fontSize: 13, lineHeight: 1.5 }}>{m.text}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
 // --- Toast (small bottom-center notification, Día 5 Ronda 4) ---
 function useToast() {
   const [toast, setToast] = React.useState(null);
@@ -788,4 +1022,5 @@ Object.assign(window, {
   SkeletonKPI, SkeletonCard, SkeletonChart, ThemeToggle,
   usePullToRefresh, PullToRefreshIndicator, haptic,
   Toast, useToast, sharePolaris,
+  LiveQuerySearch, LiveQueryResults,
 });
