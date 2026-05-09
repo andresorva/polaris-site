@@ -297,6 +297,19 @@ function DashboardScreen({ politician, onNavigate, onSelectPolitician }) {
   const refreshIntervalSec = Math.floor((((typeof window !== 'undefined' && window.POLARIS_CONFIG && window.POLARIS_CONFIG.AUTO_REFRESH_MS) || 60000) / 1000));
   const [secondsToRefresh, setSecondsToRefresh] = React.useState(refreshIntervalSec);
 
+  // Pull-to-refresh ref para el <main> scrollable
+  const mainRef = React.useRef(null);
+  const triggerManualRefresh = React.useCallback(() => {
+    if (window.apiClient) window.apiClient.cacheClear();
+    setRefreshTick(t => t + 1);
+    setSecondsToRefresh(refreshIntervalSec);
+  }, [refreshIntervalSec]);
+  const { pullDistance, isRefreshing } = usePullToRefresh({
+    onRefresh: triggerManualRefresh,
+    threshold: 80,
+    scrollEl: mainRef.current,
+  });
+
   // Auto-refresh del tab activo cada AUTO_REFRESH_MS (60s).
   // Limpia el cache del API y bumpea refreshTick para invalidar consumers
   // sin re-montar el TabPane (refreshTick ya no está en su key).
@@ -361,6 +374,7 @@ function DashboardScreen({ politician, onNavigate, onSelectPolitician }) {
 
   return (
     <div className="page-in" data-screen-label="04 Dashboard" style={{ minHeight: '100vh', background: 'var(--bg-0)', display: 'flex', flexDirection: 'column' }}>
+      <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} threshold={80} />
       <DemoModeBanner />
       {typeof CrisisBanner !== 'undefined' && (
         <CrisisBanner politicianId={politician.id} onSeeDetail={() => setTab('alerts')} />
@@ -378,7 +392,7 @@ function DashboardScreen({ politician, onNavigate, onSelectPolitician }) {
       <MobileTabsBar activeTab={tab} setTab={setTab} />
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         <DashboardSidebar activeTab={tab} setTab={setTab} onClose={() => setSidebarOpen(false)} />
-        <main style={{ flex: 1, overflow: 'auto', minWidth: 0 }}>
+        <main ref={mainRef} style={{ flex: 1, overflow: 'auto', minWidth: 0 }}>
           {TabPane && (
             <ErrorBoundary>
               <TabPane key={`${politician.id}-${tab}`} politician={politician} setTab={setTab} refreshTick={refreshTick} />

@@ -545,6 +545,97 @@ function ExpandableChart({ title, description, children }) {
 
 
 
+
+// --- Pull-to-refresh hook (Día 5 Ronda 4) ---
+function usePullToRefresh({ onRefresh, threshold = 80, scrollEl = null } = {}) {
+  const [pullDistance, setPullDistance] = React.useState(0);
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const startYRef = React.useRef(null);
+  const elRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const el = scrollEl || elRef.current;
+    if (!el) return;
+    if (typeof window === 'undefined' || window.innerWidth > 768) return; // solo mobile
+
+    const onTouchStart = (e) => {
+      if (el.scrollTop > 0) { startYRef.current = null; return; }
+      startYRef.current = e.touches[0].clientY;
+    };
+    const onTouchMove = (e) => {
+      if (startYRef.current === null) return;
+      const delta = e.touches[0].clientY - startYRef.current;
+      if (delta > 0 && el.scrollTop === 0) {
+        const eased = Math.min(delta * 0.5, threshold * 1.5);
+        setPullDistance(eased);
+      }
+    };
+    const onTouchEnd = async () => {
+      if (startYRef.current === null) return;
+      startYRef.current = null;
+      if (pullDistance >= threshold && !isRefreshing) {
+        setIsRefreshing(true);
+        setPullDistance(threshold);
+        try { await Promise.resolve(onRefresh && onRefresh()); }
+        catch {}
+        setTimeout(() => {
+          setIsRefreshing(false);
+          setPullDistance(0);
+        }, 600);
+      } else {
+        setPullDistance(0);
+      }
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: true });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [onRefresh, threshold, scrollEl, pullDistance, isRefreshing]);
+
+  return { pullDistance, isRefreshing, scrollRef: elRef };
+}
+
+function PullToRefreshIndicator({ pullDistance, isRefreshing, threshold = 80 }) {
+  if (pullDistance === 0 && !isRefreshing) return null;
+  const progress = Math.min(pullDistance / threshold, 1);
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0, left: '50%',
+      transform: `translate(-50%, ${Math.min(pullDistance - 28, threshold - 28)}px)`,
+      width: 36, height: 36,
+      borderRadius: '50%',
+      background: 'rgba(15, 22, 38, 0.92)',
+      border: '1px solid var(--line-2)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+      zIndex: 100,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      pointerEvents: 'none',
+      transition: isRefreshing ? 'transform 200ms var(--ease)' : 'none',
+    }}>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+           stroke="var(--teal)" strokeWidth="2" strokeLinecap="round"
+           style={{
+             transform: `rotate(${progress * 360}deg)`,
+             animation: isRefreshing ? 'spin 1s linear infinite' : 'none',
+             opacity: 0.4 + (progress * 0.6),
+           }}>
+        <path d="M21 12a9 9 0 11-9-9" />
+        <path d="M21 3v6h-6" />
+      </svg>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
 // --- Theme Toggle (Día 5 Ronda 4 — pedido por cliente) ---
 function ThemeToggle() {
   const [theme, setTheme] = React.useState(() => {
@@ -617,4 +708,5 @@ function SkeletonChart({ height = 240 }) {
 Object.assign(window, {
   PolarisLogo, Icon, Sparkline, AreaChart, HBar, Donut, Heatmap, Trend, Avatar, PlatformChip, KPI, ExpandableChart,
   SkeletonKPI, SkeletonCard, SkeletonChart, ThemeToggle,
+  usePullToRefresh, PullToRefreshIndicator,
 });
