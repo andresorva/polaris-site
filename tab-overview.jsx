@@ -11,7 +11,7 @@ function PageHeader({ politician, title, sub, actions }) {
       alignItems: 'center',
       justifyContent: 'space-between',
       gap: 16,
-      background: 'rgba(10,14,26,0.92)',
+      background: 'var(--bg-1)',
       backdropFilter: 'blur(20px)',
       WebkitBackdropFilter: 'blur(20px)',
       position: 'sticky',
@@ -197,9 +197,9 @@ function OverviewTab({ politician, setTab }) {
                 <div className="t-3" style={{ fontSize: 12 }}>Distribución diaria · positivo / neutral / negativo</div>
               </div>
               <div className="flex gap-3">
-                <span className="flex items-c gap-2 mono" style={{ fontSize: 11 }}><span className="dot" style={{ background: '#2EE6C8' }} /> Positivo</span>
-                <span className="flex items-c gap-2 mono" style={{ fontSize: 11 }}><span className="dot" style={{ background: '#6B7794' }} /> Neutral</span>
-                <span className="flex items-c gap-2 mono" style={{ fontSize: 11 }}><span className="dot" style={{ background: '#FF4D6D' }} /> Negativo</span>
+                <span className="flex items-c gap-2 mono" style={{ fontSize: 11 }}><span className="dot" style={{ background: 'var(--pos)' }} /> Positivo</span>
+                <span className="flex items-c gap-2 mono" style={{ fontSize: 11 }}><span className="dot" style={{ background: 'var(--neu)' }} /> Neutral</span>
+                <span className="flex items-c gap-2 mono" style={{ fontSize: 11 }}><span className="dot" style={{ background: 'var(--neg)' }} /> Negativo</span>
               </div>
             </div>
             <ExpandableChart title="Sentimiento en el tiempo" description="Distribución diaria de menciones por carga emocional: positiva, neutral, negativa.">

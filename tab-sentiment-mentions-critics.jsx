@@ -74,7 +74,7 @@ function SentimentTab({ politician }) {
                 ))}
               </div>
               <div className="flex gap-3">
-                {[['Pos','#2EE6C8'],['Neu','#6B7794'],['Neg','#FF4D6D']].map(([l,c]) =>
+                {[['Pos','var(--pos)'],['Neu','var(--neu)'],['Neg','var(--neg)']].map(([l,c]) =>
                   <span key={l} className="flex items-c gap-2 mono" style={{ fontSize: 11 }}>
                     <span className="dot" style={{ background: c }} />{l}
                   </span>
@@ -104,7 +104,7 @@ function SentimentTab({ politician }) {
                 { k: 'Cuentas coordinadas', v: -3.8, d: 'neg', desc: 'Red sospechosa publicando ataques' },
               ].map((dr, i) => (
                 <div key={i} className="flex items-c gap-3" style={{ padding: '10px 0', borderBottom: i === 5 ? 'none' : '1px solid var(--line-1)' }}>
-                  <div style={{ width: 4, height: 28, borderRadius: 4, background: dr.d === 'pos' ? '#2EE6C8' : '#FF4D6D' }} />
+                  <div style={{ width: 4, height: 28, borderRadius: 4, background: dr.d === 'pos' ? 'var(--pos)' : 'var(--neg)' }} />
                   <div className="grow">
                     <div style={{ fontSize: 13, fontWeight: 500 }}>{dr.k}</div>
                     <div className="t-3" style={{ fontSize: 11.5, marginTop: 2 }}>{dr.desc}</div>
@@ -177,16 +177,16 @@ function SentimentTab({ politician }) {
                     <div className="mono t-3" style={{ fontSize: 10 }}>{d.vol} menciones</div>
                   </div>
                 </div>
-                <div className="display" style={{ fontSize: 28, fontWeight: 500, color: d.v >= 60 ? '#2EE6C8' : '#FFB546', letterSpacing: '-0.02em' }}>{d.v}</div>
+                <div className="display" style={{ fontSize: 28, fontWeight: 500, color: d.v >= 60 ? 'var(--pos)' : 'var(--warn)', letterSpacing: '-0.02em' }}>{d.v}</div>
                 <div className="t-3 mono" style={{ fontSize: 11, marginBottom: 10 }}>índice neto</div>
                 <div className="flex col gap-2">
                   <div>
                     <div className="flex between mono" style={{ fontSize: 10, marginBottom: 3 }}><span className="t-3">POS</span><span>{100 - d.neg - 18}%</span></div>
-                    <HBar value={100 - d.neg - 18} color="#2EE6C8" height={4} />
+                    <HBar value={100 - d.neg - 18} color="var(--pos)" height={4} />
                   </div>
                   <div>
                     <div className="flex between mono" style={{ fontSize: 10, marginBottom: 3 }}><span className="t-3">NEG</span><span>{d.neg}%</span></div>
-                    <HBar value={d.neg} color="#FF4D6D" height={4} />
+                    <HBar value={d.neg} color="var(--neg)" height={4} />
                   </div>
                 </div>
               </div>
