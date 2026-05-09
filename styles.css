@@ -1436,3 +1436,34 @@ a { color: inherit; text-decoration: none; }
     font-size: 18px !important;
   }
 }
+
+/* ============================================
+   POLARIS — iOS Safari safe-area bottom
+   Compensa el toolbar de Safari mobile que tapa
+   el último contenido scrolleable.
+   ============================================ */
+@supports (padding: max(0px)) {
+  /* Dashboard main content */
+  div[data-screen-label="04 Dashboard"] main {
+    padding-bottom: max(20px, env(safe-area-inset-bottom)) !important;
+  }
+  /* Politicians selector main */
+  div[data-screen-label="03 Politicians"] main {
+    padding-bottom: max(40px, calc(60px + env(safe-area-inset-bottom))) !important;
+  }
+  /* Landing mobile menu drawer */
+  .landing-mobile-menu {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  /* Sidebar drawer mobile */
+  div[data-screen-label="04 Dashboard"] aside {
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+  }
+}
+
+/* iOS viewport-fit para que el browser respete safe areas */
+@media (max-width: 768px) {
+  html, body {
+    overscroll-behavior-y: none;
+  }
+}
