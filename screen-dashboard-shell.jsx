@@ -140,6 +140,7 @@ function DashboardNavbar({ politician, onNavigate, onSelectPolitician, onToggleS
         <button
           className="btn btn-icon btn-sm"
           onClick={() => {
+            if (typeof haptic === 'function') haptic('medium');
             try { localStorage.removeItem('polaris_session'); } catch {}
             if (typeof onNavigate === 'function') onNavigate('login');
           }}
@@ -174,7 +175,7 @@ function MobileTabsBar({ activeTab, setTab }) {
           role="tab"
           aria-selected={activeTab === t.id}
           className={`mobile-tab ${activeTab === t.id ? 'active' : ''}`}
-          onClick={() => setTab(t.id)}
+          onClick={() => { if (typeof haptic === 'function') haptic('light'); setTab(t.id); }}
         >
           <Icon name={t.icon} size={14} />
           <span>{t.label}</span>

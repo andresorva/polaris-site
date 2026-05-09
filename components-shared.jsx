@@ -495,7 +495,7 @@ function ExpandableChart({ title, description, children }) {
     <>
       <div
         className="expandable-chart-wrap"
-        onClick={() => setOpen(true)}
+        onClick={() => { haptic('light'); setOpen(true); }}
         role="button"
         tabIndex={0}
         aria-label={`Expandir ${title || 'gráfica'}`}
@@ -546,6 +546,16 @@ function ExpandableChart({ title, description, children }) {
 
 
 
+// --- Haptic feedback util (Día 5 Ronda 4 — Android only, iOS Safari no support) ---
+function haptic(intensity = 'light') {
+  try {
+    if (typeof navigator === 'undefined' || !navigator.vibrate) return;
+    const map = { light: 10, medium: 25, heavy: 50 };
+    navigator.vibrate(map[intensity] || 10);
+  } catch (e) { /* silent fail */ }
+}
+
+
 // --- Pull-to-refresh hook (Día 5 Ronda 4) ---
 function usePullToRefresh({ onRefresh, threshold = 80, scrollEl = null } = {}) {
   const [pullDistance, setPullDistance] = React.useState(0);
@@ -574,6 +584,7 @@ function usePullToRefresh({ onRefresh, threshold = 80, scrollEl = null } = {}) {
       if (startYRef.current === null) return;
       startYRef.current = null;
       if (pullDistance >= threshold && !isRefreshing) {
+        haptic('medium');
         setIsRefreshing(true);
         setPullDistance(threshold);
         try { await Promise.resolve(onRefresh && onRefresh()); }
@@ -644,6 +655,7 @@ function ThemeToggle() {
   });
 
   const toggle = () => {
+    haptic('light');
     const next = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
     document.documentElement.setAttribute('data-theme', next);
@@ -708,5 +720,5 @@ function SkeletonChart({ height = 240 }) {
 Object.assign(window, {
   PolarisLogo, Icon, Sparkline, AreaChart, HBar, Donut, Heatmap, Trend, Avatar, PlatformChip, KPI, ExpandableChart,
   SkeletonKPI, SkeletonCard, SkeletonChart, ThemeToggle,
-  usePullToRefresh, PullToRefreshIndicator,
+  usePullToRefresh, PullToRefreshIndicator, haptic,
 });
