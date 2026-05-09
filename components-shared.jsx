@@ -394,7 +394,76 @@ function KPI({ label, value, delta, deltaSuffix = '%', sub, sparkData, sparkColo
   );
 }
 
+
+// --- ExpandableChart: wrap any chart/KPI to make it tap-to-fullscreen ---
+function ExpandableChart({ title, description, children }) {
+  const [open, setOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('keydown', onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+  return (
+    <>
+      <div
+        className="expandable-chart-wrap"
+        onClick={() => setOpen(true)}
+        role="button"
+        tabIndex={0}
+        aria-label={`Expandir ${title || 'gráfica'}`}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(true); }
+        }}
+      >
+        {children}
+        <span className="expandable-chart-hint" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 3 21 3 21 9" />
+            <polyline points="9 21 3 21 3 15" />
+            <line x1="21" y1="3" x2="14" y2="10" />
+            <line x1="3" y1="21" x2="10" y2="14" />
+          </svg>
+        </span>
+      </div>
+      {open && (
+        <>
+          <div className="expandable-chart-backdrop" onClick={() => setOpen(false)} aria-hidden="true" />
+          <div className="expandable-chart-modal" role="dialog" aria-modal="true" aria-label={title || 'Gráfica expandida'}>
+            <div className="expandable-chart-modal-header">
+              <div>
+                <div className="display" style={{ fontSize: 18, fontWeight: 500 }}>{title || 'Gráfica'}</div>
+              </div>
+              <button
+                className="expandable-chart-close"
+                onClick={() => setOpen(false)}
+                aria-label="Cerrar"
+              >
+                <Icon name="x" size={20} />
+              </button>
+            </div>
+            <div className="expandable-chart-modal-body">{children}</div>
+            {description && (
+              <div className="expandable-chart-modal-desc">
+                <Icon name="info" size={14} style={{ flexShrink: 0, color: 'var(--blue)' }} />
+                <span>{description}</span>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
 // Make available globally
 Object.assign(window, {
-  PolarisLogo, Icon, Sparkline, AreaChart, HBar, Donut, Heatmap, Trend, Avatar, PlatformChip, KPI,
+  PolarisLogo, Icon, Sparkline, AreaChart, HBar, Donut, Heatmap, Trend, Avatar, PlatformChip, KPI, ExpandableChart,
 });

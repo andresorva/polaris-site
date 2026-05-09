@@ -115,14 +115,22 @@ function OverviewTab({ politician, setTab }) {
       <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* KPIs — usa live data cuando esté disponible */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-          <KPI label={isLive ? 'PPI · LIVE' : 'SENTIMIENTO'} value={live.loading ? '…' : (sentimentValue ?? '—')} sub="/100" delta={momentumValue}
-               sparkData={sparkA} accent="#2EE6C8" />
-          <KPI label="MENCIONES 24H" value={live.loading ? '…' : sovValue} delta={24.8}
-               sparkData={sparkB} accent="#4D7CFF" />
-          <KPI label={<>ALCANCE ESTIMADO<span style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(255,181,70,.12)', border: '1px solid rgba(255,181,70,.3)', borderRadius: 999, color: 'var(--warn,#FFB546)', marginLeft: 6 }}>DEMO</span></>} value="4.2M" delta={8.1}
-               sparkData={sparkC} accent="#A78BFA" />
-          <KPI label="SHARE OF VOICE" value="38" sub="%" delta={6.2}
-               sparkData={[28,30,32,34,33,36,38,37,39,38,40,38]} accent="#FFB546" />
+          <ExpandableChart title="PPI · LIVE" description="Índice de Popularidad Política. Combina sentimiento, conversación y riesgo en escala 0-100.">
+            <KPI label={isLive ? 'PPI · LIVE' : 'SENTIMIENTO'} value={live.loading ? '…' : (sentimentValue ?? '—')} sub="/100" delta={momentumValue}
+                 sparkData={sparkA} accent="#2EE6C8" />
+          </ExpandableChart>
+          <ExpandableChart title="Menciones 24h" description="Conversación digital del último día sobre este político.">
+            <KPI label="MENCIONES 24H" value={live.loading ? '…' : sovValue} delta={24.8}
+                 sparkData={sparkB} accent="#4D7CFF" />
+          </ExpandableChart>
+          <ExpandableChart title="Alcance estimado" description="Audiencia potencial alcanzada por las menciones detectadas.">
+            <KPI label={<>ALCANCE ESTIMADO<span style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(255,181,70,.12)', border: '1px solid rgba(255,181,70,.3)', borderRadius: 999, color: 'var(--warn,#FFB546)', marginLeft: 6 }}>DEMO</span></>} value="4.2M" delta={8.1}
+                 sparkData={sparkC} accent="#A78BFA" />
+          </ExpandableChart>
+          <ExpandableChart title="Share of Voice" description="Porcentaje de la conversación política que captura este personaje vs otros.">
+            <KPI label="SHARE OF VOICE" value="38" sub="%" delta={6.2}
+                 sparkData={[28,30,32,34,33,36,38,37,39,38,40,38]} accent="#FFB546" />
+          </ExpandableChart>
         </div>
 
         {/* Main grid */}
@@ -140,7 +148,9 @@ function OverviewTab({ politician, setTab }) {
                 <span className="flex items-c gap-2 mono" style={{ fontSize: 11 }}><span className="dot" style={{ background: '#FF4D6D' }} /> Negativo</span>
               </div>
             </div>
-            <AreaChart data={series} height={240} />
+            <ExpandableChart title="Sentimiento en el tiempo" description="Distribución diaria de menciones por carga emocional: positiva, neutral, negativa.">
+              <AreaChart data={series} height={240} />
+            </ExpandableChart>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--line-1)' }}>
               {[
                 ['Pico positivo', '18 oct', '+184% vs media', '#2EE6C8'],
@@ -302,7 +312,9 @@ function OverviewTab({ politician, setTab }) {
               <h3>Actividad por hora · día<span style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(255,181,70,.12)', border: '1px solid rgba(255,181,70,.3)', borderRadius: 999, color: 'var(--warn,#FFB546)', marginLeft: 6 }}>DEMO</span></h3>
               <span className="mono t-3" style={{ fontSize: 11 }}>últimos 7 días · 24h</span>
             </div>
-            <Heatmap rows={7} cols={24} />
+            <ExpandableChart title="Actividad por hora · día" description="Intensidad de menciones por hora del día y día de la semana.">
+              <Heatmap rows={7} cols={24} />
+            </ExpandableChart>
             <div className="flex between items-c" style={{ marginTop: 16 }}>
               <div className="t-3 mono" style={{ fontSize: 10, letterSpacing: '0.06em' }}>00h ················································ 23h</div>
               <div className="flex items-c gap-2 mono t-3" style={{ fontSize: 10 }}>
