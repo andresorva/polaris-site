@@ -29,7 +29,7 @@ function useIsMobile(breakpoint = 768) {
   return isMobile;
 }
 
-function DashboardNavbar({ politician, onNavigate, onSelectPolitician, onToggleSidebar, autoRefresh, setAutoRefresh, secondsToRefresh }) {
+function DashboardNavbar({ politician, onNavigate, onSelectPolitician, onToggleSidebar, autoRefresh, setAutoRefresh, secondsToRefresh, activeTab, onShare }) {
   const [showSwitcher, setShowSwitcher] = React.useState(false);
   return (
     <header style={{
@@ -132,7 +132,14 @@ function DashboardNavbar({ politician, onNavigate, onSelectPolitician, onToggleS
           <Icon name="bell" size={15} />
           <span style={{ position: 'absolute', top: 4, right: 4, width: 7, height: 7, borderRadius: 999, background: 'var(--neg)', boxShadow: '0 0 0 2px var(--bg-0)' }} />
         </button>
-        <button className="btn btn-icon btn-sm"><Icon name="share" size={15} /></button>
+        <button
+          className="btn btn-icon btn-sm"
+          onClick={() => typeof onShare === 'function' && onShare()}
+          title="Compartir esta vista"
+          aria-label="Compartir esta vista"
+        >
+          <Icon name="share" size={15} />
+        </button>
         <button className="btn btn-icon btn-sm"><Icon name="cog" size={15} /></button>
         <ThemeToggle />
         <div style={{ width: 1, height: 22, background: 'var(--line-2)', margin: '0 4px' }} />
@@ -376,6 +383,19 @@ function DashboardScreen({ politician, onNavigate, onSelectPolitician }) {
   const [refreshTick, setRefreshTick] = React.useState(0);
   const [autoRefresh, setAutoRefresh] = React.useState(true);
   const isMobile = useIsMobile();
+  const { toast, show: showToast } = useToast();
+  const handleShare = React.useCallback(async () => {
+    if (typeof haptic === 'function') haptic('light');
+    const result = await sharePolaris({
+      politician,
+      tab,
+      date: new Date().toISOString().slice(0, 10),
+      onCopied: () => showToast('✓ URL copiada al portapapeles'),
+    });
+    if (result.method === 'share') showToast('Compartido');
+    if (result.method === 'fallback') showToast('Copia manual: ' + result.url);
+    if (result.method === 'error') showToast('Error al compartir');
+  }, [politician, tab, showToast]);
   const refreshIntervalSec = Math.floor((((typeof window !== 'undefined' && window.POLARIS_CONFIG && window.POLARIS_CONFIG.AUTO_REFRESH_MS) || 60000) / 1000));
   const [secondsToRefresh, setSecondsToRefresh] = React.useState(refreshIntervalSec);
 
@@ -469,6 +489,8 @@ function DashboardScreen({ politician, onNavigate, onSelectPolitician }) {
         autoRefresh={autoRefresh}
         setAutoRefresh={setAutoRefresh}
         secondsToRefresh={secondsToRefresh}
+        activeTab={tab}
+        onShare={handleShare}
       />
       {/* Tabs horizontales scroll — solo visible en mobile via CSS */}
       <MobileTabsBar activeTab={tab} setTab={setTab} />
@@ -483,6 +505,7 @@ function DashboardScreen({ politician, onNavigate, onSelectPolitician }) {
           )}
         </main>
       </div>
+      <Toast message={toast?.message} />
     </div>
   );
 }

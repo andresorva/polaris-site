@@ -546,6 +546,72 @@ function ExpandableChart({ title, description, children }) {
 
 
 
+// --- Toast (small bottom-center notification, Día 5 Ronda 4) ---
+function useToast() {
+  const [toast, setToast] = React.useState(null);
+  const show = React.useCallback((message, durationMs = 3000) => {
+    setToast({ message, id: Date.now() });
+    setTimeout(() => setToast(t => (t && t.message === message ? null : t)), durationMs);
+  }, []);
+  return { toast, show };
+}
+
+function Toast({ message }) {
+  if (!message) return null;
+  return (
+    <div style={{
+      position: 'fixed',
+      bottom: 'max(80px, calc(80px + env(safe-area-inset-bottom)))',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      padding: '10px 18px',
+      background: 'rgba(15, 22, 38, 0.96)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+      border: '1px solid var(--line-2)',
+      borderRadius: 10,
+      color: 'var(--text-1)',
+      fontSize: 13,
+      fontFamily: 'var(--font-body)',
+      boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
+      zIndex: 1000,
+      animation: 'fadeIn 200ms var(--ease) both',
+    }}>
+      {message}
+    </div>
+  );
+}
+
+// --- Share util (Día 5 Ronda 4) ---
+async function sharePolaris({ politician, tab, date, onCopied }) {
+  try {
+    const url = new URL(window.location.href);
+    url.search = '';
+    if (politician?.slug || politician?.id) {
+      url.searchParams.set('politician', politician.slug || politician.id);
+    }
+    if (tab) url.searchParams.set('tab', tab);
+    if (date) url.searchParams.set('date', date);
+    const shareData = {
+      title: `POLARIS — ${politician?.name || 'Dashboard'}`,
+      text: `Vista de inteligencia política${politician ? ' para ' + politician.name : ''}`,
+      url: url.toString(),
+    };
+    if (navigator.share && /Mobi|Android|iPhone/i.test(navigator.userAgent)) {
+      await navigator.share(shareData);
+      return { method: 'share' };
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(url.toString());
+      if (typeof onCopied === 'function') onCopied();
+      return { method: 'clipboard' };
+    }
+    return { method: 'fallback', url: url.toString() };
+  } catch (e) {
+    return { method: 'error', error: e.message };
+  }
+}
+
 // --- Haptic feedback util (Día 5 Ronda 4 — Android only, iOS Safari no support) ---
 function haptic(intensity = 'light') {
   try {
@@ -721,4 +787,5 @@ Object.assign(window, {
   PolarisLogo, Icon, Sparkline, AreaChart, HBar, Donut, Heatmap, Trend, Avatar, PlatformChip, KPI, ExpandableChart,
   SkeletonKPI, SkeletonCard, SkeletonChart, ThemeToggle,
   usePullToRefresh, PullToRefreshIndicator, haptic,
+  Toast, useToast, sharePolaris,
 });
