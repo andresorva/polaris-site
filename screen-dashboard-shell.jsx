@@ -17,7 +17,7 @@ const TABS = [
 ];
 
 // Hook compartido para detectar mobile vs desktop (breakpoint 768)
-function useIsMobile(breakpoint = 768) {
+function useIsMobile(breakpoint = 1024) {
   const [isMobile, setIsMobile] = React.useState(
     typeof window !== 'undefined' ? window.innerWidth <= breakpoint : false,
   );
@@ -52,19 +52,32 @@ function DashboardNavbar({ politician, onNavigate, onSelectPolitician, onToggleS
         >
           <Icon name="menu" size={18} />
         </button>
-        <PolarisLogo size={20} />
+        <span
+          onClick={() => typeof onNavigate === 'function' && onNavigate('politicians')}
+          style={{ cursor: 'pointer', display: 'inline-flex' }}
+          title="Volver al selector"
+          aria-label="Volver al selector de políticos"
+        >
+          <PolarisLogo size={20} />
+        </span>
         <div style={{ width: 1, height: 22, background: 'var(--line-2)' }} />
         {/* Workspace breadcrumb */}
         <div className="flex items-c gap-2 mono" style={{ fontSize: 11, letterSpacing: '0.04em' }}>
           <span className="t-3">MX-2026</span>
           <Icon name="caret" size={11} style={{ transform: 'rotate(-90deg)', color: 'var(--text-4)' }} />
-          <button onClick={() => setShowSwitcher(v => !v)} style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            padding: '4px 10px', borderRadius: 999,
-            background: 'var(--bg-2)', border: '1px solid var(--line-2)',
-            color: 'var(--text-1)', fontSize: 12, fontWeight: 500,
-            position: 'relative',
-          }}>
+          <button
+            onClick={() => setShowSwitcher(v => !v)}
+            title="Cambiar de político"
+            aria-label="Cambiar de político"
+            aria-expanded={showSwitcher}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '4px 10px', borderRadius: 999,
+              background: 'var(--bg-2)', border: '1px solid var(--line-2)',
+              color: 'var(--text-1)', fontSize: 12, fontWeight: 500,
+              position: 'relative',
+              cursor: 'pointer',
+            }}>
             <span style={{ width: 16, height: 16, borderRadius: 999, background: `linear-gradient(135deg, ${politician.color}, ${politician.color}aa)`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontFamily: 'var(--font-display)', fontWeight: 600 }}>
               {politician.initials}
             </span>
