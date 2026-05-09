@@ -29,7 +29,7 @@ function useIsMobile(breakpoint = 768) {
   return isMobile;
 }
 
-function DashboardNavbar({ politician, onNavigate, onSelectPolitician, onToggleSidebar, autoRefresh, setAutoRefresh }) {
+function DashboardNavbar({ politician, onNavigate, onSelectPolitician, onToggleSidebar, autoRefresh, setAutoRefresh, secondsToRefresh }) {
   const [showSwitcher, setShowSwitcher] = React.useState(false);
   return (
     <header style={{
@@ -116,10 +116,16 @@ function DashboardNavbar({ politician, onNavigate, onSelectPolitician, onToggleS
         <button
           className="btn btn-icon btn-sm"
           onClick={() => typeof setAutoRefresh === 'function' && setAutoRefresh(v => !v)}
-          title={autoRefresh ? 'Pausar auto-refresh' : 'Activar auto-refresh'}
+          title={autoRefresh ? `Pausar auto-refresh (próx: ${secondsToRefresh}s)` : 'Activar auto-refresh'}
           aria-label={autoRefresh ? 'Pausar auto-refresh' : 'Activar auto-refresh'}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, paddingLeft: 10, paddingRight: 12, width: 'auto' }}
         >
           <Icon name={autoRefresh ? 'pause' : 'play'} size={15} />
+          {autoRefresh && typeof secondsToRefresh === 'number' && (
+            <span className="mono" style={{ fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.04em', fontVariantNumeric: 'tabular-nums', minWidth: 22, textAlign: 'right' }}>
+              {secondsToRefresh}s
+            </span>
+          )}
         </button>
         <button className="btn btn-icon btn-sm" title="Alertas" style={{ position: 'relative' }}>
           <Icon name="bell" size={15} />
@@ -286,19 +292,28 @@ function DashboardScreen({ politician, onNavigate, onSelectPolitician }) {
   const [refreshTick, setRefreshTick] = React.useState(0);
   const [autoRefresh, setAutoRefresh] = React.useState(true);
   const isMobile = useIsMobile();
+  const refreshIntervalSec = Math.floor((((typeof window !== 'undefined' && window.POLARIS_CONFIG && window.POLARIS_CONFIG.AUTO_REFRESH_MS) || 60000) / 1000));
+  const [secondsToRefresh, setSecondsToRefresh] = React.useState(refreshIntervalSec);
 
   // Auto-refresh del tab activo cada AUTO_REFRESH_MS (60s).
   // Limpia el cache del API y bumpea refreshTick para invalidar consumers
   // sin re-montar el TabPane (refreshTick ya no está en su key).
   React.useEffect(() => {
-    if (!autoRefresh) return;
-    const ms = (window.POLARIS_CONFIG && window.POLARIS_CONFIG.AUTO_REFRESH_MS) || 60000;
-    const timer = setInterval(() => {
+    if (!autoRefresh) {
+      setSecondsToRefresh(refreshIntervalSec);
+      return;
+    }
+    setSecondsToRefresh(refreshIntervalSec);
+    const tick = setInterval(() => {
+      setSecondsToRefresh(s => (s > 1 ? s - 1 : refreshIntervalSec));
+    }, 1000);
+    const refreshTimer = setInterval(() => {
       if (window.apiClient) window.apiClient.cacheClear();
       setRefreshTick(t => t + 1);
-    }, ms);
-    return () => clearInterval(timer);
-  }, [autoRefresh]);
+      setSecondsToRefresh(refreshIntervalSec);
+    }, refreshIntervalSec * 1000);
+    return () => { clearInterval(tick); clearInterval(refreshTimer); };
+  }, [autoRefresh, refreshIntervalSec]);
 
   // Sincroniza body class para drawer overlay (CSS body.sidebar-open lo dibuja)
   React.useEffect(() => {
@@ -355,6 +370,7 @@ function DashboardScreen({ politician, onNavigate, onSelectPolitician }) {
         onToggleSidebar={() => setSidebarOpen(v => !v)}
         autoRefresh={autoRefresh}
         setAutoRefresh={setAutoRefresh}
+        secondsToRefresh={secondsToRefresh}
       />
       {/* Tabs horizontales scroll — solo visible en mobile via CSS */}
       <MobileTabsBar activeTab={tab} setTab={setTab} />
