@@ -845,16 +845,29 @@ a { color: inherit; text-decoration: none; }
     position: fixed !important;
     top: 0; left: 0; bottom: 0;
     width: 260px !important;
-    z-index: 60;
+    z-index: 70;
     transform: translateX(-100%);
     transition: transform 240ms var(--ease);
-    box-shadow: 8px 0 32px rgba(0,0,0,0.6);
+    /* Bug #43 fix — shadow más sutil en light mode + más fuerte en dark */
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.45);
+    /* isolation también aquí (defensa en profundidad) — algunos browsers no
+       respetan inline isolation pero sí vía CSS class selector */
+    isolation: isolate;
+  }
+  [data-theme="light"] div[data-screen-label="04 Dashboard"] aside {
+    box-shadow: 8px 0 32px rgba(10, 14, 26, 0.18);
   }
   body.sidebar-open div[data-screen-label="04 Dashboard"] aside { transform: translateX(0); }
   body.sidebar-open::before {
     content: '';
     position: fixed; inset: 0;
-    background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+    /* Bug #43 fix — blur reducido a 2px (4px era agresivo, podía afectar
+       la composición del aside en iOS Safari por stacking context).
+       Background opacidad sin cambios — sigue oscureciendo el contenido
+       de fondo correctamente. */
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
     z-index: 55;
     cursor: pointer;
   }

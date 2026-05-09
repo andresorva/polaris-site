@@ -300,12 +300,21 @@ function DashboardSidebar({ activeTab, setTab, onClose }) {
     <aside style={{
       width: 220,
       borderRight: '1px solid var(--line-1)',
-      background: 'var(--bg-1)',
+      background: 'var(--bg-0)',
       padding: '20px 16px',
       display: 'flex', flexDirection: 'column', gap: 4,
       flexShrink: 0,
       overflowY: 'auto',
+      // Bug #43 fix — isolation crea nuevo stacking context para que el
+      // backdrop blur del overlay (body.sidebar-open::before) NO afecte
+      // la composición del aside en iOS Safari. backdrop-filter: none
+      // explícito previene herencia. background bg-0 (no bg-1) garantiza
+      // opacidad 100% sólida en light mode.
+      isolation: 'isolate',
+      backdropFilter: 'none',
+      WebkitBackdropFilter: 'none',
     }}>
+
       <div style={{ padding: '6px 14px 16px', marginBottom: 4, borderBottom: '1px solid var(--line-1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <PolarisLogo size={28} pulse glow={false} />
         {/* Botón cerrar drawer — solo visible en mobile (CSS lo muestra) */}
