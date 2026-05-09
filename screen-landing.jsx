@@ -4,7 +4,6 @@
 
 function LandingNav({ onLogin }) {
   const [menuOpen, setMenuOpen] = React.useState(false);
-  const links = ['Producto', 'Plataformas', 'Casos de uso', 'Precios', 'Documentación'];
 
   React.useEffect(() => {
     if (!menuOpen) return;
@@ -28,17 +27,16 @@ function LandingNav({ onLogin }) {
     }}>
       <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div className="flex items-c gap-6">
-          <span style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 19, fontWeight: 600, letterSpacing: '0.04em',
-            color: 'var(--text-1)',
-          }}>POLARIS<span style={{ color: 'var(--teal)' }}>.</span></span>
-          <span className="mono t-3" style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', borderLeft: '1px solid var(--line-2)', paddingLeft: 16 }}>by Datanaat</span>
-        </div>
-        <div className="flex items-c gap-6 landing-nav-links">
-          {links.map(l => (
-            <a key={l} className="t-2" style={{ fontSize: 13, fontWeight: 500 }}>{l}</a>
-          ))}
+          <span
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 19, fontWeight: 600, letterSpacing: '0.04em',
+              color: 'var(--text-1)',
+              cursor: 'pointer',
+              userSelect: 'none',
+            }}>POLARIS<span style={{ color: 'var(--teal)' }}>.</span></span>
+          <span className="mono t-3" style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', borderLeft: '1px solid var(--line-2)', paddingLeft: 16, whiteSpace: 'nowrap', flexShrink: 0 }}>by Datanaat</span>
         </div>
         <div className="flex items-c gap-3 landing-nav-ctas">
           <ThemeToggle />
@@ -76,11 +74,6 @@ function LandingNav({ onLogin }) {
               >
                 <Icon name="x" size={20} />
               </button>
-            </div>
-            <div className="landing-mobile-links">
-              {links.map(l => (
-                <a key={l} onClick={() => setMenuOpen(false)} className="landing-mobile-link">{l}</a>
-              ))}
             </div>
             <div className="landing-mobile-ctas">
               <button className="btn btn-ghost" onClick={() => { setMenuOpen(false); onLogin && onLogin(); }} style={{ width: '100%', justifyContent: 'center', padding: '12px 16px' }}>Iniciar sesión</button>
