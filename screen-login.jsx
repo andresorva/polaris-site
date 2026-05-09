@@ -77,9 +77,9 @@ const LoginScreen = ({ onNavigate }) => {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
               {[
-                ['Latencia', '11s', '#2EE6C8'],
-                ['Cola', '3.8 min', '#FFB546'],
-                ['Cobertura', '94%', '#4D7CFF'],
+                ['Latencia', '11s', 'var(--teal)'],
+                ['Cola', '3.8 min', 'var(--warn)'],
+                ['Cobertura', '94%', 'var(--blue)'],
               ].map((s, i) => (
                 <div key={i} style={{ paddingLeft: i ? 12 : 0, borderLeft: i ? '1px solid var(--line-1)' : 'none' }}>
                   <div className="t-3 mono" style={{ fontSize: 9, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{s[0]}</div>
@@ -146,7 +146,7 @@ const LoginScreen = ({ onNavigate }) => {
                 </div>
 
                 {error && (
-                  <div className="card" style={{ padding: '10px 14px', borderColor: 'var(--neg, #FF6B6B)', background: 'rgba(255,107,107,0.08)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div className="card" style={{ padding: '10px 14px', borderColor: 'var(--neg, #FF6B6B)', background: 'color-mix(in srgb, var(--neg) 8%, transparent)', display: 'flex', alignItems: 'center', gap: 10 }}>
                     <Icon name="info" size={14} style={{ color: 'var(--neg, #FF6B6B)', flexShrink: 0 }} />
                     <span className="t-2" style={{ fontSize: 13, color: 'var(--neg, #FF6B6B)' }}>{error}</span>
                   </div>

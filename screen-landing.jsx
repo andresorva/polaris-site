@@ -22,7 +22,7 @@ function LandingNav({ onLogin }) {
       position: 'sticky', top: 0, zIndex: 50,
       padding: '18px 40px',
       borderBottom: '1px solid var(--line-1)',
-      background: 'rgba(5,7,13,0.72)',
+      background: 'color-mix(in srgb, var(--bg-0) 72%, transparent)',
       backdropFilter: 'blur(20px)',
       WebkitBackdropFilter: 'blur(20px)',
     }}>
@@ -103,7 +103,7 @@ function HeroPreview() {
       position: 'relative',
       borderRadius: 16,
       border: '1px solid var(--line-2)',
-      background: 'linear-gradient(180deg, rgba(15,22,38,0.9), rgba(10,14,26,0.7))',
+      background: 'linear-gradient(180deg, color-mix(in srgb, var(--bg-2) 90%, transparent), color-mix(in srgb, var(--bg-1) 70%, transparent))',
       boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(46,230,200,0.08)',
       overflow: 'hidden',
       backdropFilter: 'blur(20px)',
@@ -111,9 +111,9 @@ function HeroPreview() {
       {/* Window chrome */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: '1px solid var(--line-1)', background: 'var(--bg-1)' }}>
         <div style={{ display: 'flex', gap: 6 }}>
-          <div style={{ width: 10, height: 10, borderRadius: 999, background: 'rgba(255,77,109,0.6)' }} />
-          <div style={{ width: 10, height: 10, borderRadius: 999, background: 'rgba(255,181,70,0.6)' }} />
-          <div style={{ width: 10, height: 10, borderRadius: 999, background: 'rgba(46,230,200,0.6)' }} />
+          <div style={{ width: 10, height: 10, borderRadius: 999, background: 'color-mix(in srgb, var(--neg) 60%, transparent)' }} />
+          <div style={{ width: 10, height: 10, borderRadius: 999, background: 'color-mix(in srgb, var(--warn) 60%, transparent)' }} />
+          <div style={{ width: 10, height: 10, borderRadius: 999, background: 'color-mix(in srgb, var(--pos) 60%, transparent)' }} />
         </div>
         <div className="mono t-3" style={{ fontSize: 11, marginLeft: 8 }}>polaris.datanaat.com / dashboard / mc / overview</div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -128,9 +128,9 @@ function HeroPreview() {
         <div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
             {[
-              { l: 'Sentimiento', v: '68', d: 12.4, c: '#2EE6C8' },
-              { l: 'Menciones 24h', v: '142K', d: 24.8, c: '#4D7CFF' },
-              { l: 'Alcance', v: '4.2M', d: 8.1, c: '#A78BFA' },
+              { l: 'Sentimiento', v: '68', d: 12.4, c: 'var(--teal)' },
+              { l: 'Menciones 24h', v: '142K', d: 24.8, c: 'var(--blue)' },
+              { l: 'Alcance', v: '4.2M', d: 8.1, c: 'var(--purple)' },
             ].map((k, i) => (
               <div key={i} style={{ padding: 12, background: 'var(--bg-2)', border: '1px solid var(--line-1)', borderRadius: 10 }}>
                 <div className="eyebrow" style={{ fontSize: 9 }}>{k.l}</div>
@@ -143,9 +143,9 @@ function HeroPreview() {
             <div className="flex between items-c" style={{ marginBottom: 10 }}>
               <div className="display t-1" style={{ fontSize: 13, fontWeight: 500 }}>Sentimiento · 30 días</div>
               <div className="flex gap-2">
-                <span className="pill teal" style={{ padding: '2px 8px', fontSize: 10 }}><span className="dot" style={{ background: '#2EE6C8' }} />Pos</span>
-                <span className="pill" style={{ padding: '2px 8px', fontSize: 10 }}><span className="dot" style={{ background: '#6B7794' }} />Neu</span>
-                <span className="pill coral" style={{ padding: '2px 8px', fontSize: 10 }}><span className="dot" style={{ background: '#FF4D6D' }} />Neg</span>
+                <span className="pill teal" style={{ padding: '2px 8px', fontSize: 10 }}><span className="dot" style={{ background: 'var(--pos)' }} />Pos</span>
+                <span className="pill" style={{ padding: '2px 8px', fontSize: 10 }}><span className="dot" style={{ background: 'var(--neu)' }} />Neu</span>
+                <span className="pill coral" style={{ padding: '2px 8px', fontSize: 10 }}><span className="dot" style={{ background: 'var(--neg)' }} />Neg</span>
               </div>
             </div>
             <AreaChart data={series} height={140} showAxis={false} />
@@ -165,7 +165,7 @@ function HeroPreview() {
                     <Icon name={f.platform === 'X' ? 'logo-x' : f.platform === 'TikTok' ? 'logo-tt' : 'logo-ig'} size={9} />
                   </div>
                   <div className="t-1" style={{ fontSize: 10, fontWeight: 600 }}>{f.handle}</div>
-                  <span style={{ width: 6, height: 6, borderRadius: 999, background: f.sentiment === 'pos' ? '#2EE6C8' : f.sentiment === 'neg' ? '#FF4D6D' : '#6B7794', marginLeft: 'auto' }} />
+                  <span style={{ width: 6, height: 6, borderRadius: 999, background: f.sentiment === 'pos' ? 'var(--pos)' : f.sentiment === 'neg' ? 'var(--neg)' : 'var(--neu)', marginLeft: 'auto' }} />
                 </div>
                 <div className="t-2" style={{ fontSize: 10, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{f.content}</div>
               </div>
@@ -475,7 +475,7 @@ function Hero({ onLogin }) {
         {/* LEFT — text */}
         <div style={{ position: 'relative' }}>
         {/* Eyebrow */}
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '6px 14px', border: '1px solid var(--line-2)', borderRadius: 999, background: 'rgba(15,22,38,0.6)', backdropFilter: 'blur(8px)' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '6px 14px', border: '1px solid var(--line-2)', borderRadius: 999, background: 'color-mix(in srgb, var(--bg-2) 60%, transparent)', backdropFilter: 'blur(8px)' }}>
           <span className="dot live" />
           <span className="mono" style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--text-2)' }}>POLARIS v2.4 · DISPONIBLE EN AMÉRICA LATINA</span>
         </div>
@@ -747,7 +747,7 @@ function ContactSection({ onLogin }) {
       <div className="glow-teal" style={{ opacity: 0.6 }} />
       <div className="glow-purple" style={{ opacity: 0.6 }} />
       <div style={{ maxWidth: 1280, margin: '0 auto', position: 'relative' }}>
-        <div className="card" style={{ padding: 64, position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, rgba(15,22,38,0.9), rgba(10,14,26,0.7))' }}>
+        <div className="card" style={{ padding: 64, position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, color-mix(in srgb, var(--bg-2) 90%, transparent), color-mix(in srgb, var(--bg-1) 70%, transparent))' }}>
           <div className="grid-bg" style={{ position: 'absolute', inset: 0, opacity: 0.3 }} />
           <div style={{ position: 'absolute', top: -40, right: -40, width: 320, height: 320, background: 'radial-gradient(circle, rgba(46,230,200,0.15), transparent 70%)', pointerEvents: 'none' }} />
 

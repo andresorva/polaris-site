@@ -84,7 +84,7 @@ function AgentsModal({ open, onClose }) {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 2000,
-      background: 'rgba(2, 5, 12, 0.85)',
+      background: 'var(--bg-0)',
       backdropFilter: 'blur(12px)',
       WebkitBackdropFilter: 'blur(12px)',
       display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
@@ -117,7 +117,7 @@ function AgentsModal({ open, onClose }) {
         position: 'relative',
         width: 'min(1280px, calc(100vw - 32px))',
         margin: '40px 16px',
-        background: 'linear-gradient(180deg, rgba(15,22,38,0.85), rgba(5,7,13,0.92))',
+        background: 'linear-gradient(180deg, var(--bg-2), var(--bg-1))',
         border: '1px solid rgba(46,230,200,0.25)',
         borderRadius: 20,
         boxShadow: '0 32px 120px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.04), 0 0 80px rgba(46,230,200,0.12) inset',
@@ -126,7 +126,7 @@ function AgentsModal({ open, onClose }) {
         {/* Header */}
         <div style={{
           padding: '32px 40px 24px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          borderBottom: '1px solid var(--line-1)',
           background: 'linear-gradient(180deg, rgba(46,230,200,0.04), transparent)',
           position: 'relative',
         }}>
@@ -152,7 +152,7 @@ function AgentsModal({ open, onClose }) {
                 letterSpacing: '-0.025em',
                 lineHeight: 1.05,
                 margin: 0,
-                background: 'linear-gradient(135deg, #F4F6FB 0%, #2EE6C8 100%)',
+                background: 'linear-gradient(135deg, var(--text-1) 0%, #2EE6C8 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
@@ -168,20 +168,20 @@ function AgentsModal({ open, onClose }) {
             <button onClick={onClose} aria-label="Cerrar" style={{
               width: 40, height: 40,
               borderRadius: 12,
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: 'var(--bg-3)',
+              border: '1px solid var(--line-2)',
               color: 'var(--text-2)', cursor: 'pointer', flexShrink: 0,
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
               transition: 'all 160ms var(--ease)',
             }}
             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,77,109,0.12)'; e.currentTarget.style.borderColor = 'rgba(255,77,109,0.3)'; e.currentTarget.style.color = '#FF4D6D'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = 'var(--text-2)'; }}>
+            onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-3)'; e.currentTarget.style.borderColor = 'var(--line-2)'; e.currentTarget.style.color = 'var(--text-2)'; }}>
               <Icon name="x" size={18} />
             </button>
           </div>
 
           {/* architecture descriptors strip */}
-          <div className="flex items-c gap-6 wrap" style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="flex items-c gap-6 wrap" style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--line-1)' }}>
             {[
               ['Agentes en pipeline', '9', '#2EE6C8'],
               ['Modelos', 'Sonnet 4.6 · Gemini 2.5 Pro/Flash', '#4D7CFF'],
@@ -209,7 +209,7 @@ function AgentsModal({ open, onClose }) {
         {/* Closing statement */}
         <div style={{
           padding: '32px 40px 40px',
-          borderTop: '1px solid rgba(255,255,255,0.06)',
+          borderTop: '1px solid var(--line-1)',
           background: 'linear-gradient(180deg, transparent, rgba(46,230,200,0.04))',
           textAlign: 'center',
         }}>
@@ -322,10 +322,10 @@ function AgentCard({ a, order, active, delay }) {
       position: 'relative',
       padding: 20,
       background: active
-        ? `linear-gradient(180deg, ${a.color}14, rgba(15,22,38,0.85))`
-        : 'rgba(15,22,38,0.6)',
+        ? `linear-gradient(180deg, ${a.color}14, var(--bg-2))`
+        : 'var(--bg-2)',
       backdropFilter: 'blur(8px)',
-      border: `1px solid ${active ? a.color + '60' : 'rgba(255,255,255,0.08)'}`,
+      border: `1px solid ${active ? a.color + '60' : 'var(--line-2)'}`,
       borderRadius: 14,
       transition: 'all 380ms var(--ease)',
       boxShadow: active
@@ -344,7 +344,7 @@ function AgentCard({ a, order, active, delay }) {
         borderRadius: 999,
         fontFamily: 'var(--font-mono)',
         fontSize: 10, fontWeight: 700, letterSpacing: '0.12em',
-        border: `1px solid ${active ? a.color : 'rgba(255,255,255,0.12)'}`,
+        border: `1px solid ${active ? a.color : 'var(--line-3)'}`,
         transition: 'all 380ms var(--ease)',
       }}>
         AGENTE {String(order).padStart(2, '0')}
@@ -386,7 +386,7 @@ function AgentCard({ a, order, active, delay }) {
 
       <div style={{
         marginTop: 14, paddingTop: 12,
-        borderTop: '1px dashed rgba(255,255,255,0.08)',
+        borderTop: '1px dashed var(--line-2)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         fontFamily: 'var(--font-mono)', fontSize: 10,
       }}>
