@@ -288,7 +288,7 @@ function Heatmap({ rows = 8, cols = 24, accent = '#2EE6C8' }) {
     }
   }
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 3 }}>
+    <div className="heatmap-grid" style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 3 }}>
       {cells.map((c) => (
         <div key={`${c.r}-${c.c}`}
              title={`r${c.r} h${c.c}: ${(() => { const n = (c?.v ?? 0) * 100; return (typeof n === 'number' && !isNaN(n) ? n.toFixed(0) : '—'); })()}`}

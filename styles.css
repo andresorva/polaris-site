@@ -649,6 +649,12 @@ a { color: inherit; text-decoration: none; }
   [style*="gridTemplateColumns: 'repeat(3, 1fr)'"] {
     grid-template-columns: 1fr !important;
   }
+  /* Heatmap actividad por hora · día — preservar grid 24×7 en mobile */
+  .heatmap-grid[style*="grid-template-columns"] {
+    grid-template-columns: repeat(24, minmax(8px, 1fr)) !important;
+    gap: 2px !important;
+  }
+  .heatmap-grid > div { border-radius: 2px !important; }
   /* Tablas tipo grid (lista políticos, top críticos, sources) → stack como tarjetas */
   [style*="grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr 36px"],
   [style*="grid-template-columns: 36px 2fr 1fr 1fr 1fr 36px"],
