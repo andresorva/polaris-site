@@ -134,6 +134,14 @@ function DashboardNavbar({ politician, onNavigate, onSelectPolitician, onToggleS
         </button>
         <button
           className="btn btn-icon btn-sm"
+          title="¿Cómo funciona POLARIS?"
+          aria-label="Cómo funciona POLARIS"
+          onClick={() => typeof onNavigate === 'function' && onNavigate('info')}
+        >
+          <Icon name="info" size={15} />
+        </button>
+        <button
+          className="btn btn-icon btn-sm"
           onClick={() => typeof onShare === 'function' && onShare()}
           title="Compartir esta vista"
           aria-label="Compartir esta vista"

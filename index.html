@@ -69,6 +69,7 @@
   <script type="text/babel" src="screen-landing.jsx"></script>
   <script type="text/babel" src="screen-login.jsx"></script>
   <script type="text/babel" src="screen-politicians.jsx"></script>
+  <script type="text/babel" src="screen-info.jsx"></script>
   <script type="text/babel" src="tab-overview.jsx"></script>
   <script type="text/babel" src="tab-sentiment-mentions-critics.jsx"></script>
   <script type="text/babel" src="tab-alerts-reports-sources.jsx"></script>
@@ -130,17 +131,18 @@
         const polRef = params.get('politician');
         const tab = params.get('tab');
         const date = params.get('date');
+        const info = params.get('info') === 'true';
         let politician = null;
         if (polRef && Array.isArray(POLITICIANS)) {
           politician = POLITICIANS.find(p => p.id === polRef || p.slug === polRef) || null;
         }
-        return { politician, tab, date };
-      } catch { return { politician: null, tab: null, date: null }; }
+        return { politician, tab, date, info };
+      } catch { return { politician: null, tab: null, date: null, info: false }; }
     }
 
     function App() {
       const deepLink = React.useMemo(() => getDeepLinkParams(), []);
-      const initialScreen = deepLink.politician ? 'dashboard' : (isSessionValid() ? 'politicians' : 'landing');
+      const initialScreen = deepLink.info ? 'info' : (deepLink.politician ? 'dashboard' : (isSessionValid() ? 'politicians' : 'landing'));
       const [screen, setScreen] = React.useState(initialScreen);
       const [politician, setPolitician] = React.useState(deepLink.politician || POLITICIANS[0]);
       const [appError, setAppError] = React.useState(null);
@@ -155,6 +157,7 @@
         login: LoginScreen,
         politicians: PoliticiansScreen,
         dashboard: DashboardScreen,
+        info: InfoScreen,
       }[screen];
 
       // 404/500 pseudo-routes (Día 5 Ronda 5 #31)

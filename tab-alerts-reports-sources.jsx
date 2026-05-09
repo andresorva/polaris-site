@@ -25,7 +25,7 @@ function AlertsTab({ politician }) {
   return (
     <div className="fade-in">
       <div className="demo-banner">
-        ⚠ Datos de demostración — endpoint backend en desarrollo
+        ⚠ <DataLabel type="demo" inline /> Datos de demostración — endpoint backend en desarrollo
       </div>
       <PageHeader
         politician={politician}
@@ -161,7 +161,7 @@ function ReportsTab({ politician }) {
   return (
     <div className="fade-in">
       <div className="demo-banner">
-        ⚠ Datos de demostración — endpoint backend en desarrollo
+        ⚠ <DataLabel type="demo" inline /> Datos de demostración — endpoint backend en desarrollo
       </div>
       <PageHeader
         politician={politician}
@@ -315,7 +315,7 @@ function SourcesTab({ politician }) {
   return (
     <div className="fade-in">
       <div className="demo-banner">
-        ⚠ Datos de demostración — endpoint backend en desarrollo
+        ⚠ <DataLabel type="demo" inline /> Datos de demostración — endpoint backend en desarrollo
       </div>
       <PageHeader
         politician={politician}

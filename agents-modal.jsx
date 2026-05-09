@@ -182,9 +182,10 @@ function AgentsModal({ open, onClose }) {
 
           {/* architecture descriptors strip */}
           <div className="flex items-c gap-6 wrap" style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--line-1)' }}>
+            <DataLabel type="estimated" inline />
             {[
               ['Agentes en pipeline', '9', '#2EE6C8'],
-              ['Modelos', 'Sonnet 4.6 · Gemini 2.5 Pro/Flash', '#4D7CFF'],
+              ['Modelos', 'Motor de análisis multimodelo', '#4D7CFF'],
               ['Costo por mención', '~$0.001', '#A78BFA'],
               ['Cobertura', '12 plataformas', '#FFB546'],
             ].map((s, i) => (

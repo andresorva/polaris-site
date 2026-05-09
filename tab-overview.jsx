@@ -145,11 +145,11 @@ function OverviewTab({ politician, setTab }) {
                      accent="#4D7CFF" />
               </ExpandableChart>
               <ExpandableChart title="Alcance estimado" description="Audiencia potencial alcanzada por las menciones detectadas.">
-                <KPI label={<>ALCANCE ESTIMADO<span style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(255,181,70,.12)', border: '1px solid rgba(255,181,70,.3)', borderRadius: 999, color: 'var(--warn,#FFB546)', marginLeft: 6 }}>DEMO</span></>} value="4.2M" delta={8.1}
+                <KPI label={<>ALCANCE ESTIMADO<span style={{ marginLeft: 6, display: 'inline-flex' }}><DataLabel type="estimated" inline /></span></>} value="4.2M" delta={8.1}
                      sparkData={sparkC} accent="#A78BFA" />
               </ExpandableChart>
               <ExpandableChart title="Share of Voice" description="Porcentaje de la conversación política que captura este personaje vs otros.">
-                <KPI label="SHARE OF VOICE" value="38" sub="%" delta={6.2}
+                <KPI label={<>SHARE OF VOICE<span style={{ marginLeft: 6, display: 'inline-flex' }}><DataLabel type="estimated" inline /></span></>} value="38" sub="%" delta={6.2}
                      sparkData={[28,30,32,34,33,36,38,37,39,38,40,38]} accent="#FFB546" />
               </ExpandableChart>
             </>
@@ -255,7 +255,7 @@ function OverviewTab({ politician, setTab }) {
                     <Icon name="spark" size={14} />
                   </div>
                   <div className="grow">
-                    <div className="display" style={{ fontSize: 14, fontWeight: 500 }}>Inteligencia POLARIS<span style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(255,181,70,.12)', border: '1px solid rgba(255,181,70,.3)', borderRadius: 999, color: 'var(--warn,#FFB546)', marginLeft: 6 }}>DEMO</span></div>
+                    <div className="display" style={{ fontSize: 14, fontWeight: 500 }}>Inteligencia POLARIS <DataLabel type="demo" inline /></div>
                     <div className="mono t-3" style={{ fontSize: 10, letterSpacing: '0.06em' }}>generado hace 4 minutos</div>
                   </div>
                   <span className="pill purple">AI</span>
@@ -303,7 +303,7 @@ function OverviewTab({ politician, setTab }) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <div className="card card-pad">
             <div className="section-h">
-              <h3>Distribución geográfica<span style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(255,181,70,.12)', border: '1px solid rgba(255,181,70,.3)', borderRadius: 999, color: 'var(--warn,#FFB546)', marginLeft: 6 }}>DEMO</span></h3>
+              <h3>Distribución geográfica <DataLabel type="demo" inline /></h3>
               <span className="mono t-3" style={{ fontSize: 11 }}>menciones por estado · 24h</span>
             </div>
             <div className="flex col gap-3">
@@ -332,7 +332,7 @@ function OverviewTab({ politician, setTab }) {
 
           <div className="card card-pad">
             <div className="section-h">
-              <h3>Actividad por hora · día<span style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(255,181,70,.12)', border: '1px solid rgba(255,181,70,.3)', borderRadius: 999, color: 'var(--warn,#FFB546)', marginLeft: 6 }}>DEMO</span></h3>
+              <h3>Actividad por hora · día <DataLabel type="demo" inline /></h3>
               <span className="mono t-3" style={{ fontSize: 11 }}>últimos 7 días · 24h</span>
             </div>
             <ExpandableChart title="Actividad por hora · día" description="Intensidad de menciones por hora del día y día de la semana.">

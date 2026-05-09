@@ -780,6 +780,63 @@ function LiveQueryResults({ politicianId, params, onClose }) {
   );
 }
 
+// --- DataLabel (Día 5 Ronda 6 — transparencia REAL/ESTIMADO/DEMO/PRÓXIMAMENTE) ---
+// API: <DataLabel type="demo|estimated|soon|real" inline?  />
+// type="real" o ausente → no renderea nada (default asumido)
+// inline=true → render inline en lugar de absoluto top-right
+function DataLabel({ type, inline }) {
+  if (!type || type === 'real') return null;
+  const config = {
+    demo: {
+      label: 'DEMO',
+      bg: 'rgba(255, 181, 70, 0.18)',
+      text: 'var(--warn)',
+      border: 'rgba(255, 181, 70, 0.40)',
+      tooltip: 'Dato simulado para mostrar cómo se vería',
+    },
+    estimated: {
+      label: 'ESTIMADO',
+      bg: 'rgba(77, 124, 255, 0.18)',
+      text: 'var(--blue)',
+      border: 'rgba(77, 124, 255, 0.40)',
+      tooltip: 'Aproximación basada en heurística (no medición directa)',
+    },
+    soon: {
+      label: 'PRÓXIMAMENTE',
+      bg: 'rgba(107, 119, 148, 0.18)',
+      text: 'var(--text-3)',
+      border: 'rgba(107, 119, 148, 0.40)',
+      tooltip: 'Feature en desarrollo activo',
+    },
+  };
+  const cfg = config[type];
+  if (!cfg) return null;
+  const baseStyle = {
+    fontSize: 9,
+    fontFamily: 'var(--font-mono)',
+    fontWeight: 600,
+    letterSpacing: '0.06em',
+    padding: '2px 6px',
+    background: cfg.bg,
+    color: cfg.text,
+    border: `1px solid ${cfg.border}`,
+    borderRadius: 999,
+    display: 'inline-flex',
+    alignItems: 'center',
+    cursor: 'help',
+    userSelect: 'none',
+  };
+  return (
+    <span
+      style={inline ? baseStyle : { ...baseStyle, position: 'absolute', top: 8, right: 8, zIndex: 5 }}
+      data-polaris-tooltip={cfg.tooltip}
+      title={cfg.tooltip}
+    >
+      {cfg.label}
+    </span>
+  );
+}
+
 // --- Footer minimalista (Día 5 Ronda 5 #30) ---
 function Footer({ compact }) {
   return (
@@ -1278,5 +1335,5 @@ Object.assign(window, {
   usePullToRefresh, PullToRefreshIndicator, haptic,
   Toast, useToast, sharePolaris,
   LiveQuerySearch, LiveQueryResults,
-  EmptyState, ErrorState, Footer, ErrorPage,
+  EmptyState, ErrorState, Footer, ErrorPage, DataLabel,
 });
