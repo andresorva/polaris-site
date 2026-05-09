@@ -541,7 +541,51 @@ function ExpandableChart({ title, description, children }) {
   );
 }
 
+
+// --- Loading Skeletons ---
+function SkeletonKPI({ accent }) {
+  return (
+    <div className="card card-pad" style={{ padding: 18, position: 'relative', overflow: 'hidden' }}>
+      {accent && <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: 2,
+        background: `linear-gradient(90deg, transparent, ${accent}, transparent)`,
+        opacity: 0.7,
+      }} />}
+      <div className="skeleton skeleton-text" style={{ width: '40%', height: 10 }} />
+      <div className="skeleton" style={{ width: '60%', height: 32, marginTop: 14, borderRadius: 6 }} />
+      <div className="skeleton" style={{ width: '100%', height: 28, marginTop: 14, borderRadius: 6 }} />
+    </div>
+  );
+}
+
+function SkeletonCard({ height = 200 }) {
+  return (
+    <div className="card card-pad" style={{ padding: 20, height }}>
+      <div className="skeleton skeleton-text" style={{ width: '50%', height: 12 }} />
+      <div className="skeleton skeleton-text" style={{ width: '80%', height: 18, marginTop: 12 }} />
+      <div className="flex items-c gap-3" style={{ marginTop: 18 }}>
+        <div className="skeleton" style={{ width: 56, height: 56, borderRadius: '50%' }} />
+        <div style={{ flex: 1 }}>
+          <div className="skeleton skeleton-text" style={{ width: '70%', height: 14 }} />
+          <div className="skeleton skeleton-text" style={{ width: '40%', height: 11, marginTop: 8 }} />
+        </div>
+      </div>
+      <div className="skeleton" style={{ width: '100%', height: 8, marginTop: 18, borderRadius: 4 }} />
+    </div>
+  );
+}
+
+function SkeletonChart({ height = 240 }) {
+  return (
+    <div style={{ width: '100%', height }}>
+      <div className="skeleton skeleton-text" style={{ width: '35%', height: 14 }} />
+      <div className="skeleton" style={{ width: '100%', height: height - 40, marginTop: 14, borderRadius: 8 }} />
+    </div>
+  );
+}
+
 // Make available globally
 Object.assign(window, {
   PolarisLogo, Icon, Sparkline, AreaChart, HBar, Donut, Heatmap, Trend, Avatar, PlatformChip, KPI, ExpandableChart,
+  SkeletonKPI, SkeletonCard, SkeletonChart,
 });

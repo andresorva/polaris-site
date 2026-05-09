@@ -97,9 +97,10 @@ function PoliticiansScreen({ onNavigate, onSelectPolitician }) {
 
         {/* Estado del fetch — banner sutil sobre la lista */}
         {state.loading && (
-          <div className="card card-pad" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span className="dot live" />
-            <span className="t-3 mono" style={{ fontSize: 11 }}>Cargando políticos desde la API…</span>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16, marginBottom: 12 }}>
+            <SkeletonCard height={220} />
+            <SkeletonCard height={220} />
+            <SkeletonCard height={220} />
           </div>
         )}
         {!state.loading && state.error && state.isFallback && (

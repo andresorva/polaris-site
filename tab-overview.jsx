@@ -123,26 +123,37 @@ function OverviewTab({ politician, setTab }) {
       <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* KPIs — usa live data cuando esté disponible */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-          <ExpandableChart title="PPI · LIVE" description="Índice de Popularidad Política. Combina sentimiento, conversación y riesgo en escala 0-100.">
-            <KPI label={isLive ? 'PPI · LIVE' : 'SENTIMIENTO'} value={live.loading ? '…' : (sentimentValue ?? '—')} sub="/100" delta={momentumValue}
-                 sparkData={sparkA} accent="#2EE6C8" />
-          </ExpandableChart>
-          <ExpandableChart title="Menciones 24h" description="Conversación digital del último día sobre este político.">
-            <KPI label="MENCIONES 24H"
-                 value={live.loading ? '…' : sovValue}
-                 sub={isZeroActivity ? 'Sin actividad reciente' : undefined}
-                 delta={isZeroActivity ? undefined : 24.8}
-                 sparkData={isZeroActivity ? undefined : sparkB}
-                 accent="#4D7CFF" />
-          </ExpandableChart>
-          <ExpandableChart title="Alcance estimado" description="Audiencia potencial alcanzada por las menciones detectadas.">
-            <KPI label={<>ALCANCE ESTIMADO<span style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(255,181,70,.12)', border: '1px solid rgba(255,181,70,.3)', borderRadius: 999, color: 'var(--warn,#FFB546)', marginLeft: 6 }}>DEMO</span></>} value="4.2M" delta={8.1}
-                 sparkData={sparkC} accent="#A78BFA" />
-          </ExpandableChart>
-          <ExpandableChart title="Share of Voice" description="Porcentaje de la conversación política que captura este personaje vs otros.">
-            <KPI label="SHARE OF VOICE" value="38" sub="%" delta={6.2}
-                 sparkData={[28,30,32,34,33,36,38,37,39,38,40,38]} accent="#FFB546" />
-          </ExpandableChart>
+          {live.loading ? (
+            <>
+              <SkeletonKPI accent="#2EE6C8" />
+              <SkeletonKPI accent="#4D7CFF" />
+              <SkeletonKPI accent="#A78BFA" />
+              <SkeletonKPI accent="#FFB546" />
+            </>
+          ) : (
+            <>
+              <ExpandableChart title="PPI · LIVE" description="Índice de Popularidad Política. Combina sentimiento, conversación y riesgo en escala 0-100.">
+                <KPI label={isLive ? 'PPI · LIVE' : 'SENTIMIENTO'} value={sentimentValue ?? '—'} sub="/100" delta={momentumValue}
+                     sparkData={sparkA} accent="#2EE6C8" />
+              </ExpandableChart>
+              <ExpandableChart title="Menciones 24h" description="Conversación digital del último día sobre este político.">
+                <KPI label="MENCIONES 24H"
+                     value={sovValue}
+                     sub={isZeroActivity ? 'Sin actividad reciente' : undefined}
+                     delta={isZeroActivity ? undefined : 24.8}
+                     sparkData={isZeroActivity ? undefined : sparkB}
+                     accent="#4D7CFF" />
+              </ExpandableChart>
+              <ExpandableChart title="Alcance estimado" description="Audiencia potencial alcanzada por las menciones detectadas.">
+                <KPI label={<>ALCANCE ESTIMADO<span style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(255,181,70,.12)', border: '1px solid rgba(255,181,70,.3)', borderRadius: 999, color: 'var(--warn,#FFB546)', marginLeft: 6 }}>DEMO</span></>} value="4.2M" delta={8.1}
+                     sparkData={sparkC} accent="#A78BFA" />
+              </ExpandableChart>
+              <ExpandableChart title="Share of Voice" description="Porcentaje de la conversación política que captura este personaje vs otros.">
+                <KPI label="SHARE OF VOICE" value="38" sub="%" delta={6.2}
+                     sparkData={[28,30,32,34,33,36,38,37,39,38,40,38]} accent="#FFB546" />
+              </ExpandableChart>
+            </>
+          )}
         </div>
 
         {/* Main grid */}

@@ -59,11 +59,16 @@ function DailyBriefTab({ politician }) {
 
       <div style={{ padding: 24, maxWidth: 800, margin: '0 auto' }}>
         {state.loading && (
-          <div className="card card-pad" style={{ textAlign: 'center', padding: 40 }}>
-            <span className="dot live" />
-            <div className="mono t-3" style={{ fontSize: 12, marginTop: 12 }}>
-              Cargando brief…
-            </div>
+          <div className="card card-pad" style={{ padding: '32px 40px' }}>
+            <div className="skeleton skeleton-text" style={{ width: '40%', height: 12 }} />
+            <div className="skeleton skeleton-text" style={{ width: '70%', height: 28, marginTop: 14 }} />
+            <div className="skeleton skeleton-text" style={{ width: '95%', height: 14, marginTop: 16 }} />
+            <div className="skeleton skeleton-text" style={{ width: '90%', height: 14, marginTop: 8 }} />
+            <div className="skeleton skeleton-text" style={{ width: '85%', height: 14, marginTop: 8 }} />
+            <div className="skeleton skeleton-text" style={{ width: '50%', height: 18, marginTop: 24 }} />
+            <div className="skeleton skeleton-text" style={{ width: '92%', height: 14, marginTop: 12 }} />
+            <div className="skeleton skeleton-text" style={{ width: '88%', height: 14, marginTop: 8 }} />
+            <div className="skeleton skeleton-text" style={{ width: '40%', height: 14, marginTop: 8 }} />
           </div>
         )}
 
