@@ -87,13 +87,36 @@ function OverviewTab({ politician, setTab }) {
   const sentimentValue = (live?.ppi?.ppi && typeof live.ppi.ppi.score === 'number' && !isNaN(live.ppi.ppi.score))
     ? Math.round(live.ppi.ppi.score)
     : politician.sentiment;
+  // Componentes live del PPI (Día 5 Ronda 7 — wireado desde backend, antes hardcoded)
+  const liveComponents = (live?.ppi?.ppi && live.ppi.ppi.components) || {};
+  const liveMentionCount = (typeof liveComponents.mention_count === 'number') ? liveComponents.mention_count : null;
+  const liveTotalEngagement = (typeof liveComponents.total_engagement === 'number') ? liveComponents.total_engagement : null;
   const sovRaw = live?.ppi?.sov_24h;
-  const isZeroActivity = !live.loading && (sovRaw === 0 || sovRaw === null || sovRaw === undefined) && isLive;
-  const sovValue = isZeroActivity
-    ? '—'
-    : (typeof sovRaw === 'number' && !isNaN(sovRaw))
-      ? (sovRaw >= 1000 ? `${(sovRaw / 1000).toFixed(1)}K` : String(sovRaw))
-      : politician.mentions;
+  const isZeroActivity = !live.loading && (liveMentionCount === 0 || liveMentionCount === null) && isLive;
+
+  // Formatter K/M para counts grandes
+  const _fmtBig = (n) => {
+    if (typeof n !== 'number' || isNaN(n)) return '—';
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+    return String(Math.round(n));
+  };
+
+  // KPI MENCIONES 24H: cuenta real (Ronda 7 — antes leía sov_24h por error)
+  const mentionsValue = (typeof liveMentionCount === 'number')
+    ? _fmtBig(liveMentionCount)
+    : (politician.mentions || '—');
+
+  // KPI ALCANCE: total_engagement live (Ronda 7 #37 — antes "4.2M" hardcoded)
+  const reachValue = (typeof liveTotalEngagement === 'number')
+    ? _fmtBig(liveTotalEngagement)
+    : '—';
+
+  // KPI SOV: sov_24h % live (Ronda 7 #38 — antes "38" hardcoded)
+  const sovDisplayValue = (typeof sovRaw === 'number' && !isNaN(sovRaw))
+    ? `${sovRaw.toFixed(1)}`
+    : '—';
+
   const momentumValue = (live?.ppi?.momentum) ?? politician?.trendDelta ?? 0;
 
   // Breakdown real para el donut + barras horizontales
@@ -138,19 +161,27 @@ function OverviewTab({ politician, setTab }) {
               </ExpandableChart>
               <ExpandableChart title="Menciones 24h" description="Conversación digital del último día sobre este político.">
                 <KPI label="MENCIONES 24H"
-                     value={sovValue}
+                     value={isZeroActivity ? '—' : mentionsValue}
                      sub={isZeroActivity ? 'Sin actividad reciente' : undefined}
                      delta={isZeroActivity ? undefined : 24.8}
                      sparkData={isZeroActivity ? undefined : sparkB}
                      accent="#4D7CFF" />
               </ExpandableChart>
-              <ExpandableChart title="Alcance estimado" description="Audiencia potencial alcanzada por las menciones detectadas.">
-                <KPI label={<>ALCANCE ESTIMADO<span style={{ marginLeft: 6, display: 'inline-flex' }}><DataLabel type="estimated" inline /></span></>} value="4.2M" delta={8.1}
-                     sparkData={sparkC} accent="#A78BFA" />
+              <ExpandableChart title="Alcance" description="Engagement total (likes + replies + shares + retweets) acumulado de todas las menciones en las últimas 24h.">
+                <KPI label="ALCANCE"
+                     value={reachValue}
+                     sub={isZeroActivity ? 'Sin actividad reciente' : undefined}
+                     delta={isZeroActivity ? undefined : 8.1}
+                     sparkData={isZeroActivity ? undefined : sparkC}
+                     accent="#A78BFA" />
               </ExpandableChart>
-              <ExpandableChart title="Share of Voice" description="Porcentaje de la conversación política que captura este personaje vs otros.">
-                <KPI label={<>SHARE OF VOICE<span style={{ marginLeft: 6, display: 'inline-flex' }}><DataLabel type="estimated" inline /></span></>} value="38" sub="%" delta={6.2}
-                     sparkData={[28,30,32,34,33,36,38,37,39,38,40,38]} accent="#FFB546" />
+              <ExpandableChart title="Share of Voice" description="Porcentaje de la conversación política que captura este personaje vs otros políticos en sistema.">
+                <KPI label="SHARE OF VOICE"
+                     value={sovDisplayValue}
+                     sub="%"
+                     delta={isZeroActivity ? undefined : 6.2}
+                     sparkData={isZeroActivity ? undefined : [28,30,32,34,33,36,38,37,39,38,40,38]}
+                     accent="#FFB546" />
               </ExpandableChart>
             </>
           )}
