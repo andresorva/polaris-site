@@ -130,6 +130,8 @@ const Icon = ({ name, size = 18, strokeWidth = 1.6, ...rest }) => {
     'broadcast':  <><circle cx="12" cy="12" r="2" /><path d="M8 8c-2.2 2.2-2.2 5.8 0 8M16 8c2.2 2.2 2.2 5.8 0 8M5 5c-3.9 3.9-3.9 10.1 0 14M19 5c3.9 3.9 3.9 10.1 0 14" /></>,
     'history':    <><path d="M3 12a9 9 0 109-9 9 9 0 00-9 9z" /><path d="M3 5v4h4" /><path d="M12 7v5l3 2" /></>,
     'expand':     <><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></>,
+    'sun':        <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></>,
+    'moon':       <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" />,
   };
   return (
     <svg viewBox="0 0 24 24" width={size} height={size}
@@ -542,6 +544,33 @@ function ExpandableChart({ title, description, children }) {
 }
 
 
+
+// --- Theme Toggle (Día 5 Ronda 4 — pedido por cliente) ---
+function ThemeToggle() {
+  const [theme, setTheme] = React.useState(() => {
+    if (typeof document === 'undefined') return 'dark';
+    return document.documentElement.getAttribute('data-theme') || 'dark';
+  });
+
+  const toggle = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('polaris_theme', next); } catch {}
+  };
+
+  return (
+    <button
+      className="theme-toggle"
+      onClick={toggle}
+      title={theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
+      aria-label={theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
+    >
+      <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={16} />
+    </button>
+  );
+}
+
 // --- Loading Skeletons ---
 function SkeletonKPI({ accent }) {
   return (
@@ -587,5 +616,5 @@ function SkeletonChart({ height = 240 }) {
 // Make available globally
 Object.assign(window, {
   PolarisLogo, Icon, Sparkline, AreaChart, HBar, Donut, Heatmap, Trend, Avatar, PlatformChip, KPI, ExpandableChart,
-  SkeletonKPI, SkeletonCard, SkeletonChart,
+  SkeletonKPI, SkeletonCard, SkeletonChart, ThemeToggle,
 });

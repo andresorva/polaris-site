@@ -64,6 +64,89 @@
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* ============================================
+   POLARIS — Light theme override (Día 5 Ronda 4)
+   Pedido por cliente Carlos. Cubre componentes
+   que usan CSS vars (~50% de la UI). Componentes
+   con inline RGB hardcoded quedan dark en light.
+   ============================================ */
+[data-theme="light"] {
+  --bg-0: #ffffff;
+  --bg-1: #fafbfc;
+  --bg-2: #f3f5f9;
+  --bg-3: #e8edf4;
+  --bg-4: #dde3ec;
+
+  --line-1: rgba(0, 0, 0, 0.06);
+  --line-2: rgba(0, 0, 0, 0.10);
+  --line-3: rgba(0, 0, 0, 0.16);
+
+  --text-1: #0a0e1a;
+  --text-2: #475569;
+  --text-3: #64748b;
+  --text-4: #94a3b8;
+
+  --teal: #0d9488;
+  --teal-dim: #0f766e;
+  --teal-glow: rgba(13, 148, 136, 0.20);
+  --blue: #2563eb;
+  --blue-dim: #1d4ed8;
+  --purple: #7c3aed;
+  --purple-dim: #6d28d9;
+
+  --pos: #0d9488;
+  --pos-bg: rgba(13, 148, 136, 0.10);
+  --neu: #64748b;
+  --neu-bg: rgba(100, 116, 139, 0.10);
+  --neg: #dc2626;
+  --neg-bg: rgba(220, 38, 38, 0.10);
+  --warn: #d97706;
+  --warn-bg: rgba(217, 119, 6, 0.10);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.12);
+  --shadow-glow: 0 0 0 1px rgba(13, 148, 136, 0.3), 0 0 32px rgba(13, 148, 136, 0.12);
+}
+
+/* Smooth theme transition */
+html, body, #root,
+.card, .btn, header, aside, main, nav,
+[data-screen-label] {
+  transition: background-color 240ms var(--ease), color 240ms var(--ease), border-color 240ms var(--ease);
+}
+
+/* Light mode: forzar texto sobre cards a colores claros si el card sigue dark por inline RGB */
+[data-theme="light"] body {
+  background: var(--bg-0);
+  color: var(--text-1);
+}
+
+/* Light mode skeleton: gradient claro */
+[data-theme="light"] .skeleton {
+  background: linear-gradient(90deg, #e8edf4 0%, #f3f5f9 50%, #e8edf4 100%);
+}
+
+/* Theme toggle button */
+.theme-toggle {
+  width: 40px; height: 40px;
+  border: 1px solid var(--line-2);
+  background: transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-2);
+  transition: background 200ms var(--ease), color 200ms var(--ease), border-color 200ms var(--ease);
+  flex-shrink: 0;
+}
+.theme-toggle:hover, .theme-toggle:active {
+  background: var(--bg-3);
+  color: var(--teal);
+  border-color: var(--line-3);
+}
+
 * { box-sizing: border-box; }
 
 html, body, #root {

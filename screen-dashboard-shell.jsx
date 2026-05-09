@@ -134,6 +134,7 @@ function DashboardNavbar({ politician, onNavigate, onSelectPolitician, onToggleS
         </button>
         <button className="btn btn-icon btn-sm"><Icon name="share" size={15} /></button>
         <button className="btn btn-icon btn-sm"><Icon name="cog" size={15} /></button>
+        <ThemeToggle />
         <div style={{ width: 1, height: 22, background: 'var(--line-2)', margin: '0 4px' }} />
         <Avatar initials="AO" size={28} gradient="linear-gradient(135deg, #2EE6C8, #4D7CFF)" />
         <button

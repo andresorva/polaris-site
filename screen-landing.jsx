@@ -41,6 +41,7 @@ function LandingNav({ onLogin }) {
           ))}
         </div>
         <div className="flex items-c gap-3 landing-nav-ctas">
+          <ThemeToggle />
           <button className="btn btn-ghost btn-sm" onClick={onLogin}>Iniciar sesión</button>
           <button className="btn btn-primary btn-sm" onClick={onLogin}>
             Solicitar acceso <Icon name="arrow-r" size={14} />
