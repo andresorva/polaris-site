@@ -377,8 +377,8 @@ function DemoModeBanner() {
   );
 }
 
-function DashboardScreen({ politician, onNavigate, onSelectPolitician }) {
-  const [tab, setTab] = React.useState('overview');
+function DashboardScreen({ politician, onNavigate, onSelectPolitician, deepLinkDate, deepLinkTab }) {
+  const [tab, setTab] = React.useState(deepLinkTab && ['overview', 'sentiment', 'mentions', 'critics', 'alerts', 'reports', 'sources', 'brief', 'daily-brief', 'strategist'].includes(deepLinkTab) ? (deepLinkTab === 'daily-brief' ? 'brief' : deepLinkTab) : 'overview');
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [refreshTick, setRefreshTick] = React.useState(0);
   const [autoRefresh, setAutoRefresh] = React.useState(true);
@@ -502,12 +502,18 @@ function DashboardScreen({ politician, onNavigate, onSelectPolitician }) {
           <LiveQuerySearch politicianId={politician.id} onResult={(params) => setLiveQueryParams(params)} />
           {TabPane && (
             <ErrorBoundary>
-              <TabPane key={`${politician.id}-${tab}`} politician={politician} setTab={setTab} refreshTick={refreshTick} />
+              <TabPane
+                key={`${politician.id}-${tab}`}
+                politician={politician}
+                setTab={setTab}
+                refreshTick={refreshTick}
+                deepLinkDate={deepLinkDate}
+              />
             </ErrorBoundary>
           )}
         </main>
       </div>
-      <Toast message={toast?.message} />
+      <Toast message={toast?.message} variant={toast?.variant} />
       {liveQueryParams && (
         <LiveQueryResults
           politicianId={politician.id}
@@ -515,6 +521,7 @@ function DashboardScreen({ politician, onNavigate, onSelectPolitician }) {
           onClose={() => setLiveQueryParams(null)}
         />
       )}
+      {!isMobile && typeof Footer !== 'undefined' && <Footer compact />}
     </div>
   );
 }

@@ -143,6 +143,12 @@
       const initialScreen = deepLink.politician ? 'dashboard' : (isSessionValid() ? 'politicians' : 'landing');
       const [screen, setScreen] = React.useState(initialScreen);
       const [politician, setPolitician] = React.useState(deepLink.politician || POLITICIANS[0]);
+      const [appError, setAppError] = React.useState(null);
+
+      // Detect 404 / 500 pseudo-routes via deep link
+      const path = (typeof window !== 'undefined' && window.location.pathname) || '/';
+      const isNotFound = path === '/404' || path === '/404.html';
+      const isServerError = path === '/500' || path === '/500.html';
 
       const Page = {
         landing: LandingPage,
@@ -151,11 +157,35 @@
         dashboard: DashboardScreen,
       }[screen];
 
+      // 404/500 pseudo-routes (Día 5 Ronda 5 #31)
+      if (isNotFound) {
+        return (
+          <ErrorPage
+            code="404"
+            title="Página no encontrada"
+            description="La URL que intentas abrir no existe en POLARIS."
+            onHome={() => { window.history.replaceState({}, '', '/'); setScreen('landing'); }}
+          />
+        );
+      }
+      if (isServerError) {
+        return (
+          <ErrorPage
+            code="500"
+            title="Error del servidor"
+            description="Algo falló del lado del servidor. Reintenta o contacta a soporte."
+            onHome={() => { window.history.replaceState({}, '', '/'); setScreen('landing'); }}
+          />
+        );
+      }
+
       return (
         <Page
           onNavigate={setScreen}
           onSelectPolitician={setPolitician}
           politician={politician}
+          deepLinkDate={deepLink.date}
+          deepLinkTab={deepLink.tab}
         />
       );
     }

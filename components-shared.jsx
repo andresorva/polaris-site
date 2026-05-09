@@ -780,6 +780,96 @@ function LiveQueryResults({ politicianId, params, onClose }) {
   );
 }
 
+// --- Footer minimalista (Día 5 Ronda 5 #30) ---
+function Footer({ compact }) {
+  return (
+    <footer style={{
+      padding: compact ? '16px 20px' : '32px 24px',
+      borderTop: '1px solid var(--line-1)',
+      background: 'var(--bg-1)',
+      display: 'flex',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 14,
+      fontSize: 12,
+      color: 'var(--text-3)',
+      fontFamily: 'var(--font-body)',
+    }}>
+      <div className="flex items-c gap-2">
+        <span style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: 14,
+          fontWeight: 600,
+          letterSpacing: '0.04em',
+          color: 'var(--text-1)',
+        }}>POLARIS<span style={{ color: 'var(--teal)' }}>.</span></span>
+        <span className="t-3">© 2026 Datanaat. Inteligencia política para LATAM.</span>
+      </div>
+      <div className="flex items-c gap-3">
+        <span className="mono t-3" style={{ fontSize: 10, letterSpacing: '0.06em' }}>v1.0 · datos públicos</span>
+        <span style={{ color: 'var(--line-3)' }}>·</span>
+        <a href="#privacy" className="t-3" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Privacidad</a>
+        <a href="#terms" className="t-3" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Términos</a>
+      </div>
+    </footer>
+  );
+}
+
+// --- ErrorPage (Día 5 Ronda 5 #31 — 404/500) ---
+function ErrorPage({ code, title, description, onHome }) {
+  const accent = code === '500' ? 'var(--neg)' : 'var(--warn)';
+  return (
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 24,
+      background: 'var(--bg-0)',
+      color: 'var(--text-1)',
+      textAlign: 'center',
+      gap: 16,
+    }}>
+      <div style={{
+        fontFamily: 'var(--font-display)',
+        fontSize: 'clamp(72px, 18vw, 120px)',
+        fontWeight: 700,
+        lineHeight: 0.9,
+        background: `linear-gradient(135deg, ${accent}, var(--teal))`,
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
+        letterSpacing: '-0.04em',
+      }}>{code}</div>
+      <h1 className="display" style={{ fontSize: 'clamp(20px, 4vw, 26px)', fontWeight: 500, margin: 0, letterSpacing: '-0.02em' }}>{title}</h1>
+      {description && (
+        <p className="t-2" style={{ fontSize: 14, color: 'var(--text-2)', maxWidth: 480, lineHeight: 1.6, margin: 0 }}>{description}</p>
+      )}
+      <div className="flex items-c gap-2" style={{ marginTop: 12 }}>
+        <button
+          className="btn btn-primary btn-sm"
+          onClick={() => { if (typeof onHome === 'function') onHome(); }}
+        >
+          <Icon name="home" size={13} /> Ir al inicio
+        </button>
+        {code === '500' && (
+          <button
+            className="btn btn-sm"
+            onClick={() => window.location.reload()}
+          >
+            <Icon name="history" size={13} /> Reintentar
+          </button>
+        )}
+      </div>
+      <a href="mailto:soporte@polaris.datanaat.com" className="mono t-3" style={{ fontSize: 11, color: 'var(--text-3)', textDecoration: 'none', marginTop: 8 }}>
+        soporte@polaris.datanaat.com
+      </a>
+    </div>
+  );
+}
+
 // --- EmptyState (Día 5 Ronda 5 — para reemplazar ceros pelados) ---
 function EmptyState({ icon = 'compass', title, description, action, compact }) {
   return (
@@ -1188,5 +1278,5 @@ Object.assign(window, {
   usePullToRefresh, PullToRefreshIndicator, haptic,
   Toast, useToast, sharePolaris,
   LiveQuerySearch, LiveQueryResults,
-  EmptyState, ErrorState,
+  EmptyState, ErrorState, Footer, ErrorPage,
 });

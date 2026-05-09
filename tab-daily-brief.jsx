@@ -18,9 +18,10 @@ function _renderBriefHtml(md) {
   return '<pre>' + md.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])) + '</pre>';
 }
 
-function DailyBriefTab({ politician }) {
+function DailyBriefTab({ politician, deepLinkDate }) {
   const [state, setState] = React.useState({ loading: true, brief: null, error: null });
   const [refreshKey, setRefreshKey] = React.useState(0);
+  const [briefDate, setBriefDate] = React.useState(deepLinkDate || null);
 
   const isUuid = window.PolarisData && window.PolarisData.isUuid(politician.id);
 
@@ -31,12 +32,15 @@ function DailyBriefTab({ politician }) {
     }
     let alive = true;
     setState(s => ({ ...s, loading: true }));
+    const path = briefDate
+      ? `/api/v1/politicians/${politician.id}/daily-brief?date=${encodeURIComponent(briefDate)}`
+      : `/api/v1/politicians/${politician.id}/daily-brief`;
     window.apiClient
-      .request(`/api/v1/politicians/${politician.id}/daily-brief`)
+      .request(path)
       .then(data => alive && setState({ loading: false, brief: data, error: null }))
       .catch(err => alive && setState({ loading: false, brief: null, error: err.message }));
     return () => { alive = false; };
-  }, [politician.id, refreshKey, isUuid]);
+  }, [politician.id, refreshKey, isUuid, briefDate]);
 
   return (
     <div className="fade-in">
@@ -47,6 +51,15 @@ function DailyBriefTab({ politician }) {
         actions={
           <>
             <FreshnessIndicator politicianId={politician.id} />
+            <input
+              type="date"
+              className="input"
+              value={briefDate || ''}
+              onChange={(e) => setBriefDate(e.target.value || null)}
+              max={new Date().toISOString().slice(0, 10)}
+              style={{ padding: '6px 10px', fontSize: 12, height: 32, maxWidth: 160 }}
+              title="Cambiar fecha del brief"
+            />
             <button className="btn btn-sm" onClick={() => { window.apiClient && window.apiClient.cacheClear(); setRefreshKey(k => k + 1); }}>
               <Icon name="history" size={13} /> Recargar
             </button>
