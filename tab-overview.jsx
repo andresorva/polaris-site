@@ -4,14 +4,19 @@
 
 function PageHeader({ politician, title, sub, actions }) {
   return (
-    <div style={{
+    <div className="page-header-sticky" style={{
       padding: '20px 28px',
       borderBottom: '1px solid var(--line-1)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
       gap: 16,
-      background: 'var(--bg-0)',
+      background: 'rgba(10,14,26,0.92)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+      position: 'sticky',
+      top: 0,
+      zIndex: 30,
     }}>
       <div className="flex items-c gap-4">
         <Avatar initials={politician.initials} size={48} gradient={`linear-gradient(135deg, ${politician.color}, ${politician.color}aa)`} />

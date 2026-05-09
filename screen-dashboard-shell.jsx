@@ -37,6 +37,7 @@ function DashboardNavbar({ politician, onNavigate, onSelectPolitician, onToggleS
       borderBottom: '1px solid var(--line-1)',
       background: 'rgba(5,7,13,0.92)',
       backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
       position: 'sticky', top: 0, zIndex: 50,
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       gap: 16,
