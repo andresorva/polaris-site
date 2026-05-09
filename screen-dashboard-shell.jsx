@@ -186,6 +186,87 @@ function MobileTabsBar({ activeTab, setTab }) {
   );
 }
 
+// --- Bottom Tab Bar iOS-style (Día 5 Ronda 4) ---
+const PRIMARY_TABS = ['overview', 'sentiment', 'brief', 'critics'];
+
+function BottomTabBar({ activeTab, setTab }) {
+  const [moreOpen, setMoreOpen] = React.useState(false);
+  const primary = TABS.filter(t => PRIMARY_TABS.includes(t.id));
+  const secondary = TABS.filter(t => !PRIMARY_TABS.includes(t.id));
+  const isInSecondary = secondary.some(t => t.id === activeTab);
+
+  React.useEffect(() => {
+    if (!moreOpen) return;
+    const onKey = (e) => { if (e.key === 'Escape') setMoreOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [moreOpen]);
+
+  return (
+    <>
+      <nav className="bottom-tab-bar" role="tablist" aria-label="Navegación principal">
+        {primary.map(t => {
+          const isActive = activeTab === t.id;
+          return (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={isActive}
+              className={`bottom-tab ${isActive ? 'active' : ''}`}
+              onClick={() => { if (typeof haptic === 'function') haptic('light'); setTab(t.id); }}
+            >
+              <Icon name={t.icon} size={20} />
+              <span>{t.label}</span>
+              {t.badge && <span className="bottom-tab-badge">{t.badge}</span>}
+            </button>
+          );
+        })}
+        <button
+          role="tab"
+          aria-selected={isInSecondary}
+          className={`bottom-tab ${isInSecondary || moreOpen ? 'active' : ''}`}
+          onClick={() => { if (typeof haptic === 'function') haptic('light'); setMoreOpen(true); }}
+        >
+          <Icon name="dots" size={20} />
+          <span>Más</span>
+        </button>
+      </nav>
+      {moreOpen && (
+        <>
+          <div className="bottom-tab-backdrop" onClick={() => setMoreOpen(false)} />
+          <div className="bottom-tab-drawer" role="dialog" aria-label="Más opciones">
+            <div className="bottom-tab-drawer-handle" />
+            <div className="bottom-tab-drawer-title">Más opciones</div>
+            <div className="bottom-tab-drawer-list">
+              {secondary.map(t => {
+                const isActive = activeTab === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    role="tab"
+                    aria-selected={isActive}
+                    className={`bottom-tab-drawer-item ${isActive ? 'active' : ''}`}
+                    onClick={() => {
+                      if (typeof haptic === 'function') haptic('light');
+                      setTab(t.id);
+                      setMoreOpen(false);
+                    }}
+                  >
+                    <Icon name={t.icon} size={18} />
+                    <span className="grow">{t.label}</span>
+                    {t.badge && <span className="pill coral" style={{ padding: '1px 7px', fontSize: 10 }}>{t.badge}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+
 function DashboardSidebar({ activeTab, setTab, onClose }) {
   return (
     <aside style={{
@@ -391,6 +472,7 @@ function DashboardScreen({ politician, onNavigate, onSelectPolitician }) {
       />
       {/* Tabs horizontales scroll — solo visible en mobile via CSS */}
       <MobileTabsBar activeTab={tab} setTab={setTab} />
+      {isMobile && <BottomTabBar activeTab={tab} setTab={setTab} />}
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         <DashboardSidebar activeTab={tab} setTab={setTab} onClose={() => setSidebarOpen(false)} />
         <main ref={mainRef} style={{ flex: 1, overflow: 'auto', minWidth: 0 }}>
