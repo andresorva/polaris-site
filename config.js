@@ -15,10 +15,6 @@ window.POLARIS_CONFIG = {
   // UUID de Carlos Orvañanos Rea en Supabase (politico principal validado)
   POLITICIAN_ID_COR: '65dc08f0-8fe9-463f-880f-36b5da66ebe6',
 
-  // UUID de Claudia Sheinbaum (alto volumen, validacion pipeline)
-  POLITICIAN_ID_SHEINBAUM: '9bf67ca9-492f-49fe-bb85-862b5149cb57',
-  POLITICIAN_SLUG_SHEINBAUM: 'claudia-sheinbaum',
-
   // Configuracion del cliente HTTP
   REQUEST_TIMEOUT_MS: 10000,    // 10s antes de fallar a mock
   CACHE_TTL_MS: 60000,          // 60s cache en memoria

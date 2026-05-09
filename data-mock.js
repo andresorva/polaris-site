@@ -1,8 +1,7 @@
 /* ============================================
    POLARIS — Mock Data & Helpers (FALLBACK)
-   Solo 2 politicos REALES con UUIDs de produccion:
-   Carlos Orvañanos Rea (alcalde Cuajimalpa) y
-   Claudia Sheinbaum (Presidenta MX). Si el API
+   1 politico REAL con UUID de produccion:
+   Carlos Orvañanos Rea (alcalde Cuajimalpa). Si el API
    responde, los componentes usan loadPoliticians()
    y muestran data live; este mock solo sirve de
    fallback cuando el API no esta disponible.
@@ -22,21 +21,6 @@ const POLITICIANS = [
     trend: 'flat',
     trendDelta: 1.2,
     handle: '@carlosorvananos',
-    lastActive: 'live',
-  },
-  {
-    id: '9bf67ca9-492f-49fe-bb85-862b5149cb57',
-    name: 'Claudia Sheinbaum',
-    initials: 'CS',
-    role: 'Presidenta',
-    party: 'Morena',
-    region: 'México',
-    color: '#FF4D6D',
-    sentiment: 61,
-    mentions: '250',
-    trend: 'up',
-    trendDelta: 4.8,
-    handle: '@Claudiashein',
     lastActive: 'live',
   },
 ];
