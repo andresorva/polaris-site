@@ -396,7 +396,7 @@ function KPI({ label, value, delta, deltaSuffix = '%', sub, sparkData, sparkColo
         {delta !== undefined && <Trend value={delta} suffix={deltaSuffix} />}
       </div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 12 }}>
-        <span className="metric-num">{value}</span>
+        <span className="metric-num"><CountUp value={value} /></span>
         {sub && <span className="t-3 mono" style={{ fontSize: 11 }}>{sub}</span>}
       </div>
       {sparkData && (
@@ -406,6 +406,70 @@ function KPI({ label, value, delta, deltaSuffix = '%', sub, sparkData, sparkColo
       )}
     </div>
   );
+}
+
+// --- CountUp: anima un valor numérico de 0 al final en 1.5s, ease-out, sólo en primer mount ---
+function CountUp({ value, duration = 1500 }) {
+  // Parse el valor: extrae número y sufijo (K, M, %, etc.)
+  const parsed = React.useMemo(() => {
+    if (value === undefined || value === null) return { animatable: false, raw: '' };
+    if (typeof value !== 'string' && typeof value !== 'number') return { animatable: false, raw: value };
+    const str = String(value);
+    // No animar placeholders
+    if (str === '…' || str === '—' || str === '') return { animatable: false, raw: str };
+    // Match opcional signo + número con decimal opcional + sufijo opcional
+    const match = str.match(/^(-?\d+\.?\d*)([KMB]|%)?$/i);
+    if (!match) return { animatable: false, raw: str };
+    const num = parseFloat(match[1]);
+    if (isNaN(num)) return { animatable: false, raw: str };
+    return {
+      animatable: true,
+      target: num,
+      suffix: match[2] || '',
+      decimals: match[1].includes('.') ? (match[1].split('.')[1] || '').length : 0,
+      raw: str,
+    };
+  }, [value]);
+
+  const hasAnimatedRef = React.useRef(false);
+  const [displayValue, setDisplayValue] = React.useState(parsed.animatable ? 0 : parsed.raw);
+
+  React.useEffect(() => {
+    if (!parsed.animatable) {
+      setDisplayValue(parsed.raw);
+      return;
+    }
+    if (hasAnimatedRef.current) {
+      // Re-render por cambio de valor después del mount inicial: salta directo al valor final
+      setDisplayValue(formatCountUp(parsed.target, parsed.decimals, parsed.suffix));
+      return;
+    }
+    hasAnimatedRef.current = true;
+    const start = performance.now();
+    const target = parsed.target;
+    let raf;
+    const tick = (now) => {
+      const elapsed = now - start;
+      const t = Math.min(1, elapsed / duration);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      const current = target * eased;
+      setDisplayValue(formatCountUp(current, parsed.decimals, parsed.suffix));
+      if (t < 1) raf = requestAnimationFrame(tick);
+      else setDisplayValue(formatCountUp(target, parsed.decimals, parsed.suffix));
+    };
+    raf = requestAnimationFrame(tick);
+    return () => { if (raf) cancelAnimationFrame(raf); };
+  }, [parsed, duration]);
+
+  return <>{displayValue}</>;
+}
+
+function formatCountUp(num, decimals, suffix) {
+  if (decimals > 0) {
+    return num.toFixed(decimals) + suffix;
+  }
+  // Enteros con commas
+  return Math.round(num).toLocaleString('es-MX') + suffix;
 }
 
 
