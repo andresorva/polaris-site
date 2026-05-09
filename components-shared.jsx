@@ -780,41 +780,206 @@ function LiveQueryResults({ politicianId, params, onClose }) {
   );
 }
 
-// --- Toast (small bottom-center notification, Día 5 Ronda 4) ---
+// --- EmptyState (Día 5 Ronda 5 — para reemplazar ceros pelados) ---
+function EmptyState({ icon = 'compass', title, description, action, compact }) {
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: compact ? '24px 16px' : '48px 24px',
+      textAlign: 'center',
+      gap: compact ? 8 : 14,
+      minHeight: compact ? 0 : 200,
+    }}>
+      <div style={{
+        width: compact ? 40 : 56,
+        height: compact ? 40 : 56,
+        borderRadius: '50%',
+        background: 'var(--bg-3)',
+        border: '1px solid var(--line-2)',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'var(--text-3)',
+        flexShrink: 0,
+      }}>
+        <Icon name={icon} size={compact ? 18 : 24} strokeWidth={1.6} />
+      </div>
+      {title && (
+        <div className="display" style={{
+          fontSize: compact ? 14 : 17,
+          fontWeight: 500,
+          color: 'var(--text-1)',
+          letterSpacing: '-0.01em',
+        }}>{title}</div>
+      )}
+      {description && (
+        <div className="t-3" style={{
+          fontSize: compact ? 12 : 13,
+          color: 'var(--text-3)',
+          maxWidth: 320,
+          lineHeight: 1.5,
+        }}>{description}</div>
+      )}
+      {action && action.label && (
+        <button
+          className="btn btn-sm btn-ghost"
+          onClick={action.onClick}
+          style={{ marginTop: 6 }}
+        >
+          {action.label}
+        </button>
+      )}
+    </div>
+  );
+}
+
+
+// --- ErrorState (Día 5 Ronda 5 — manejo elegante de fetch fail) ---
+function ErrorState({ title = 'No pudimos cargar los datos', description, onRetry, errorCode, compact }) {
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: compact ? '20px 14px' : '32px 24px',
+      textAlign: 'center',
+      gap: compact ? 8 : 12,
+      background: 'var(--bg-2)',
+      border: '1px solid var(--line-1)',
+      borderTop: '2px solid var(--neg)',
+      borderRadius: 'var(--r-lg, 12px)',
+      minHeight: compact ? 0 : 160,
+    }}>
+      <div style={{
+        width: compact ? 36 : 48,
+        height: compact ? 36 : 48,
+        borderRadius: '50%',
+        background: 'rgba(255, 77, 109, 0.10)',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'var(--neg)',
+        flexShrink: 0,
+      }}>
+        <Icon name="warning" size={compact ? 16 : 20} strokeWidth={2} />
+      </div>
+      <div className="display" style={{
+        fontSize: compact ? 14 : 16,
+        fontWeight: 500,
+        color: 'var(--text-1)',
+        letterSpacing: '-0.01em',
+      }}>{title}</div>
+      {description && (
+        <div className="t-3" style={{
+          fontSize: 12.5,
+          color: 'var(--text-2)',
+          maxWidth: 360,
+          lineHeight: 1.5,
+        }}>{description}</div>
+      )}
+      {errorCode && (
+        <div className="mono t-3" style={{
+          fontSize: 10,
+          letterSpacing: '0.04em',
+          color: 'var(--text-3)',
+          opacity: 0.7,
+        }}>code: {errorCode}</div>
+      )}
+      {onRetry && (
+        <button
+          className="btn btn-primary btn-sm"
+          onClick={onRetry}
+          style={{ marginTop: 6 }}
+        >
+          <Icon name="history" size={13} /> Reintentar
+        </button>
+      )}
+    </div>
+  );
+}
+
+
+// --- Toast variants (Día 5 Ronda 5 — extendido del Bug #18) ---
+// API:
+//   const { toast, show } = useToast();
+//   show('mensaje', 'success' | 'error' | 'info' | 'warning', durationMs)
+//   o show.success('...'), show.error('...'), show.info('...'), show.warning('...')
 function useToast() {
   const [toast, setToast] = React.useState(null);
-  const show = React.useCallback((message, durationMs = 3000) => {
-    setToast({ message, id: Date.now() });
-    setTimeout(() => setToast(t => (t && t.message === message ? null : t)), durationMs);
+  const showRaw = React.useCallback((message, variant = 'info', durationMs = 3000) => {
+    const id = Date.now();
+    setToast({ message, variant, id });
+    setTimeout(() => {
+      setToast(t => (t && t.id === id ? null : t));
+    }, durationMs);
   }, []);
+  // Convenience methods
+  const show = Object.assign(showRaw, {
+    success: (msg, dur) => showRaw(msg, 'success', dur),
+    error: (msg, dur) => showRaw(msg, 'error', dur || 5000),
+    info: (msg, dur) => showRaw(msg, 'info', dur),
+    warning: (msg, dur) => showRaw(msg, 'warning', dur || 4500),
+  });
   return { toast, show };
 }
 
-function Toast({ message }) {
+function Toast({ message, variant }) {
   if (!message) return null;
+  const variantConfig = {
+    success: { color: 'var(--pos)', icon: 'check', bg: 'rgba(46, 230, 200, 0.10)' },
+    error:   { color: 'var(--neg)', icon: 'warning', bg: 'rgba(255, 77, 109, 0.10)' },
+    info:    { color: 'var(--blue)', icon: 'info', bg: 'rgba(77, 124, 255, 0.10)' },
+    warning: { color: 'var(--warn)', icon: 'warning', bg: 'rgba(255, 181, 70, 0.10)' },
+  };
+  const cfg = variantConfig[variant] || variantConfig.info;
   return (
     <div style={{
       position: 'fixed',
       bottom: 'max(80px, calc(80px + env(safe-area-inset-bottom)))',
       left: '50%',
       transform: 'translateX(-50%)',
-      padding: '10px 18px',
-      background: 'rgba(15, 22, 38, 0.96)',
+      padding: '12px 18px',
+      background: 'var(--bg-1)',
       backdropFilter: 'blur(20px)',
       WebkitBackdropFilter: 'blur(20px)',
-      border: '1px solid var(--line-2)',
-      borderRadius: 10,
+      border: `1px solid ${cfg.color}`,
+      borderRadius: 12,
       color: 'var(--text-1)',
       fontSize: 13,
       fontFamily: 'var(--font-body)',
+      fontWeight: 500,
       boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
       zIndex: 1000,
       animation: 'fadeIn 200ms var(--ease) both',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      minWidth: 200,
+      maxWidth: 'min(420px, 90vw)',
     }}>
-      {message}
+      <span style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 24, height: 24,
+        borderRadius: '50%',
+        background: cfg.bg,
+        color: cfg.color,
+        flexShrink: 0,
+      }}>
+        <Icon name={cfg.icon} size={14} strokeWidth={2.2} />
+      </span>
+      <span style={{ flex: 1 }}>{message}</span>
     </div>
   );
 }
+
+// --- Toast prop ahora pasa también variant ---
+// Consumers deben usar: <Toast message={toast?.message} variant={toast?.variant} />
 
 // --- Share util (Día 5 Ronda 4) ---
 async function sharePolaris({ politician, tab, date, onCopied }) {
@@ -1023,4 +1188,5 @@ Object.assign(window, {
   usePullToRefresh, PullToRefreshIndicator, haptic,
   Toast, useToast, sharePolaris,
   LiveQuerySearch, LiveQueryResults,
+  EmptyState, ErrorState,
 });
