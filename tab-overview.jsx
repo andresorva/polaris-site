@@ -88,9 +88,12 @@ function OverviewTab({ politician, setTab }) {
     ? Math.round(live.ppi.ppi.score)
     : politician.sentiment;
   const sovRaw = live?.ppi?.sov_24h;
-  const sovValue = (typeof sovRaw === 'number' && !isNaN(sovRaw))
-    ? (sovRaw >= 1000 ? `${(sovRaw / 1000).toFixed(1)}K` : String(sovRaw))
-    : politician.mentions;
+  const isZeroActivity = !live.loading && (sovRaw === 0 || sovRaw === null || sovRaw === undefined) && isLive;
+  const sovValue = isZeroActivity
+    ? '—'
+    : (typeof sovRaw === 'number' && !isNaN(sovRaw))
+      ? (sovRaw >= 1000 ? `${(sovRaw / 1000).toFixed(1)}K` : String(sovRaw))
+      : politician.mentions;
   const momentumValue = (live?.ppi?.momentum) ?? politician?.trendDelta ?? 0;
 
   // Breakdown real para el donut + barras horizontales
@@ -125,8 +128,12 @@ function OverviewTab({ politician, setTab }) {
                  sparkData={sparkA} accent="#2EE6C8" />
           </ExpandableChart>
           <ExpandableChart title="Menciones 24h" description="Conversación digital del último día sobre este político.">
-            <KPI label="MENCIONES 24H" value={live.loading ? '…' : sovValue} delta={24.8}
-                 sparkData={sparkB} accent="#4D7CFF" />
+            <KPI label="MENCIONES 24H"
+                 value={live.loading ? '…' : sovValue}
+                 sub={isZeroActivity ? 'Sin actividad reciente' : undefined}
+                 delta={isZeroActivity ? undefined : 24.8}
+                 sparkData={isZeroActivity ? undefined : sparkB}
+                 accent="#4D7CFF" />
           </ExpandableChart>
           <ExpandableChart title="Alcance estimado" description="Audiencia potencial alcanzada por las menciones detectadas.">
             <KPI label={<>ALCANCE ESTIMADO<span style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(255,181,70,.12)', border: '1px solid rgba(255,181,70,.3)', borderRadius: 999, color: 'var(--warn,#FFB546)', marginLeft: 6 }}>DEMO</span></>} value="4.2M" delta={8.1}
