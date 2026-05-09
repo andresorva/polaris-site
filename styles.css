@@ -676,9 +676,9 @@ a { color: inherit; text-decoration: none; }
 
   /* Landing nav: ocultar menú central, mostrar solo logo + CTA */
   nav[style*="padding: '18px 40px'"] { padding: 12px 16px !important; }
-  nav[style*="padding: '18px 40px'"] .flex.items-c.gap-6 > a { display: none !important; }
-  nav[style*="padding: '18px 40px'"] .flex.items-c.gap-6 > span[style*="borderLeft"] { display: none !important; }
-  nav[style*="padding: '18px 40px'"] .btn-ghost { display: none !important; }
+  .landing-nav-links { display: none !important; }
+  .landing-nav-ctas { display: none !important; }
+  .landing-hamburger { display: inline-flex !important; }
 
   /* Hero: ocultar la estrella decorativa para que el texto respire */
   .hero-star-wrap { display: none !important; }
@@ -1142,4 +1142,120 @@ a { color: inherit; text-decoration: none; }
   .kpi-bullets {
     font-size: 12px;
   }
+}
+
+/* ============================================
+   POLARIS — Landing Hamburger Menu (mobile)
+   ============================================ */
+.landing-hamburger {
+  display: none;
+  width: 44px; height: 44px;
+  border: 1px solid var(--line-2);
+  background: rgba(15, 22, 38, 0.6);
+  border-radius: 10px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  padding: 0;
+  transition: border-color 200ms var(--ease), background 200ms var(--ease);
+}
+.landing-hamburger:active {
+  background: rgba(46, 230, 200, 0.12);
+  border-color: var(--teal);
+}
+.landing-hamburger span {
+  display: block;
+  width: 20px; height: 2px;
+  background: var(--text-1);
+  border-radius: 2px;
+}
+
+.landing-mobile-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 90;
+  animation: fadeIn 280ms var(--ease) both;
+}
+
+.landing-mobile-menu {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: min(360px, 88vw);
+  background: var(--bg-1);
+  border-left: 1px solid var(--line-2);
+  z-index: 91;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -16px 0 40px rgba(0, 0, 0, 0.6);
+  animation: slideInRight 320ms var(--ease) both;
+  overflow-y: auto;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.landing-mobile-menu-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px;
+  border-bottom: 1px solid var(--line-1);
+  flex-shrink: 0;
+}
+.landing-mobile-close {
+  width: 44px; height: 44px;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: background 200ms var(--ease);
+}
+.landing-mobile-close:active { background: var(--bg-3); }
+
+.landing-mobile-links {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 8px;
+  gap: 2px;
+  flex: 1;
+}
+.landing-mobile-link {
+  display: block;
+  padding: 14px 16px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-1);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 180ms var(--ease);
+}
+.landing-mobile-link:active {
+  background: var(--bg-3);
+  color: var(--teal);
+}
+
+.landing-mobile-ctas {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+  border-top: 1px solid var(--line-1);
+  flex-shrink: 0;
+}
+
+@media (min-width: 769px) {
+  .landing-hamburger { display: none !important; }
 }

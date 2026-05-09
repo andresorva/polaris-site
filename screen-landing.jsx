@@ -3,6 +3,20 @@
    ============================================ */
 
 function LandingNav({ onLogin }) {
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const links = ['Producto', 'Plataformas', 'Casos de uso', 'Precios', 'Documentación'];
+
+  React.useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e) => { if (e.key === 'Escape') setMenuOpen(false); };
+    document.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [menuOpen]);
+
   return (
     <nav style={{
       position: 'sticky', top: 0, zIndex: 50,
@@ -21,20 +35,61 @@ function LandingNav({ onLogin }) {
           }}>POLARIS<span style={{ color: 'var(--teal)' }}>.</span></span>
           <span className="mono t-3" style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', borderLeft: '1px solid var(--line-2)', paddingLeft: 16 }}>by Datanaat</span>
         </div>
-        <div className="flex items-c gap-6">
-          <a className="t-2" style={{ fontSize: 13, fontWeight: 500 }}>Producto</a>
-          <a className="t-2" style={{ fontSize: 13, fontWeight: 500 }}>Plataformas</a>
-          <a className="t-2" style={{ fontSize: 13, fontWeight: 500 }}>Casos de uso</a>
-          <a className="t-2" style={{ fontSize: 13, fontWeight: 500 }}>Precios</a>
-          <a className="t-2" style={{ fontSize: 13, fontWeight: 500 }}>Documentación</a>
+        <div className="flex items-c gap-6 landing-nav-links">
+          {links.map(l => (
+            <a key={l} className="t-2" style={{ fontSize: 13, fontWeight: 500 }}>{l}</a>
+          ))}
         </div>
-        <div className="flex items-c gap-3">
+        <div className="flex items-c gap-3 landing-nav-ctas">
           <button className="btn btn-ghost btn-sm" onClick={onLogin}>Iniciar sesión</button>
           <button className="btn btn-primary btn-sm" onClick={onLogin}>
             Solicitar acceso <Icon name="arrow-r" size={14} />
           </button>
         </div>
+        <button
+          className="landing-hamburger"
+          onClick={() => setMenuOpen(true)}
+          aria-label="Abrir menu"
+          aria-expanded={menuOpen}
+        >
+          <span /><span /><span />
+        </button>
       </div>
+
+      {menuOpen && (
+        <>
+          <div
+            className="landing-mobile-backdrop"
+            onClick={() => setMenuOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="landing-mobile-menu" role="dialog" aria-label="Menu de navegación">
+            <div className="landing-mobile-menu-header">
+              <span style={{
+                fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 600, letterSpacing: '0.04em', color: 'var(--text-1)',
+              }}>POLARIS<span style={{ color: 'var(--teal)' }}>.</span></span>
+              <button
+                className="landing-mobile-close"
+                onClick={() => setMenuOpen(false)}
+                aria-label="Cerrar menu"
+              >
+                <Icon name="x" size={20} />
+              </button>
+            </div>
+            <div className="landing-mobile-links">
+              {links.map(l => (
+                <a key={l} onClick={() => setMenuOpen(false)} className="landing-mobile-link">{l}</a>
+              ))}
+            </div>
+            <div className="landing-mobile-ctas">
+              <button className="btn btn-ghost" onClick={() => { setMenuOpen(false); onLogin && onLogin(); }} style={{ width: '100%', justifyContent: 'center', padding: '12px 16px' }}>Iniciar sesión</button>
+              <button className="btn btn-primary" onClick={() => { setMenuOpen(false); onLogin && onLogin(); }} style={{ width: '100%', justifyContent: 'center', padding: '12px 16px' }}>
+                Solicitar acceso <Icon name="arrow-r" size={14} />
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </nav>
   );
 }
