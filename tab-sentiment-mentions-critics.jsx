@@ -212,7 +212,7 @@ function MentionsTab({ politician }) {
     { id: 'viral', label: 'Virales' },
     { id: 'suspicious', label: 'Sospechosos' },
   ];
-  const platforms = ['all', 'X', 'TikTok', 'Instagram', 'Facebook', 'YouTube', 'Telegram'];
+  const platforms = ['all', 'X', 'Bluesky', 'TikTok', 'Instagram', 'Facebook', 'YouTube'];
 
   const isLive = window.PolarisData && window.PolarisData.isUuid(politician.id);
   const [state, setState] = React.useState({ data: window.FEED_ITEMS_MOCK || [], loading: isLive, error: null, isFallback: !isLive });

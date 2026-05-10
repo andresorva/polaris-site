@@ -252,12 +252,15 @@
       tiktok: 'TikTok', tiktok_comment: 'TikTok',
       facebook: 'Facebook', facebook_comment: 'Facebook',
       youtube: 'YouTube', youtube_comment: 'YouTube',
-      bluesky: 'X', // visualizado como tweet para no romper iconos
+      bluesky: 'Bluesky',
       reddit: 'X', newsdata: 'Web', wikipedia: 'Web',
       gdelt: 'Web', google_trends: 'Web', meta: 'Facebook',
     };
     const sentLabel = (r.sentiment_label || 'neu').slice(0, 3);
     const sent = sentLabel === 'pos' ? 'pos' : sentLabel === 'neg' ? 'neg' : 'neu';
+    // Backend devuelve engagement nested en engagement_metrics (likes/retweets/replies)
+    // Mantener fallback a campos flat por si algun endpoint legacy aun los expone.
+    const em = r.engagement_metrics || {};
     return {
       id: r.id || r.external_id || Math.random().toString(36).slice(2),
       platform: platMap[r.platform] || 'X',
@@ -268,7 +271,11 @@
       content: r.content || r.text || '(sin texto)',
       sentiment: sent,
       score: typeof r.sentiment_score === 'number' ? r.sentiment_score : 0,
-      engagement: { likes: r.engagement_likes || 0, replies: r.engagement_replies || 0, shares: r.engagement_shares || 0 },
+      engagement: {
+        likes: em.likes ?? r.engagement_likes ?? 0,
+        replies: em.replies ?? em.comments ?? r.engagement_replies ?? 0,
+        shares: em.retweets ?? em.reposts ?? em.shares ?? r.engagement_shares ?? 0,
+      },
       reach: r.reach ? String(r.reach) : '—',
       flags: r.is_own_content ? ['organic', 'verified'] : ['organic'],
       _raw: r,

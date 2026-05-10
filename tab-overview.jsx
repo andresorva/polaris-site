@@ -228,7 +228,7 @@ function OverviewTab({ politician, setTab }) {
             </div>
             <div className="flex center" style={{ padding: '8px 0 12px' }}>
               <div style={{ position: 'relative' }}>
-                <Donut value={politician.sentiment} size={160} stroke={14} color="#2EE6C8" label={politician.sentiment} sublabel="POS · NEU · NEG" />
+                <Donut value={br?.pct?.positive ?? 62} size={160} stroke={14} color="#2EE6C8" label={br?.pct?.positive ?? 62} sublabel="POS · NEU · NEG" />
               </div>
             </div>
             <div className="flex col gap-3" style={{ marginTop: 8 }}>

@@ -22,7 +22,7 @@ window.POLARIS_CONFIG = {
   AUTO_REFRESH_MS: 60000,        // tab activo se refresca cada 60s
 
   // Habilitar logs detallados en consola (desactivar en prod)
-  DEBUG: true,
+  DEBUG: false,
 };
 
 // Helper rapido para construir URLs absolutas al API
