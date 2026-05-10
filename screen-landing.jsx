@@ -570,7 +570,7 @@ function ProblemSection() {
 
 function HowItWorks({ onShowAgents }) {
   const steps = [
-    { n: '01', title: 'Conecta', desc: 'Activamos tus fuentes en 24 horas: X, TikTok, Instagram, Facebook, YouTube, Telegram, medios y WhatsApp pública.' },
+    { n: '01', title: 'Conecta', desc: 'Activamos tus fuentes en 24 horas: X, TikTok, Instagram, Facebook, YouTube, Bluesky y medios digitales.' },
     { n: '02', title: 'Calibra', desc: 'Definimos tus actores: políticos a monitorear, narrativas críticas, regiones, idiomas, vocabulario propio del país.' },
     { n: '03', title: 'Procesa', desc: 'Nuestro motor clasifica sentimiento, detecta redes coordinadas, geolocaliza menciones y rastrea el origen de cada narrativa.' },
     { n: '04', title: 'Decide', desc: 'Tu equipo recibe alertas accionables, reportes ejecutivos y dashboards en vivo. Acción en minutos, no en días.' },
@@ -618,7 +618,7 @@ function HowItWorks({ onShowAgents }) {
 function FeaturesGrid() {
   const features = [
     { icon: 'pulse', accent: '#2EE6C8', title: 'Stream en vivo multiplataforma',
-      desc: 'X, TikTok, Instagram, Facebook, YouTube, Telegram y mensajería pública en un solo feed unificado.',
+      desc: 'X, TikTok, Instagram, Facebook, YouTube y Bluesky en un solo feed unificado.',
       detail: ['Latencia <15s en X', 'Filtros booleanos avanzados', 'Geolocalización a nivel municipio'] },
     { icon: 'chart', accent: '#4D7CFF', title: 'Sentimiento auditable',
       desc: 'Cada clasificación incluye su evidencia. Modelo entrenado en español, portugués e inglés latinoamericano.',
@@ -675,8 +675,7 @@ function PlatformsStrip() {
     { name: 'Instagram', icon: 'logo-ig', color: '#A78BFA' },
     { name: 'Facebook', icon: 'logo-fb', color: '#4D7CFF' },
     { name: 'YouTube', icon: 'logo-yt', color: '#FF4D6D' },
-    { name: 'Telegram', icon: 'logo-tg', color: '#4D7CFF' },
-    { name: 'WhatsApp', icon: 'logo-wa', color: '#2EE6C8' },
+    { name: 'Bluesky', icon: 'logo-bs', color: '#4D7CFF' },
     { name: 'Web', icon: 'logo-w', color: '#FFB546' },
     { name: 'Reddit', icon: 'logo-r', color: '#FFB546' },
   ];

@@ -13,8 +13,8 @@ const AGENTS = [
   {
     n: '02', emoji: '🏷️', name: 'Clasificador',
     role: 'Taxonomía',
-    desc: 'Categoriza cada mención por tema: seguridad, obras públicas, economía, salud, educación, transparencia, y 30+ categorías políticas. Identifica el contexto y la intención del mensaje.',
-    icon: 'filter', color: '#4D7CFF', volume: '36 categorías activas',
+    desc: 'Categoriza cada mención por tema: seguridad, obras públicas, economía, salud, educación, transparencia, y 16 categorias politicas. Identifica el contexto y la intención del mensaje.',
+    icon: 'filter', color: '#4D7CFF', volume: '16 categorias activas',
   },
   {
     n: '03', emoji: '💡', name: 'Empatía',
@@ -391,7 +391,7 @@ function AgentCard({ a, order, active, delay }) {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         fontFamily: 'var(--font-mono)', fontSize: 10,
       }}>
-        <span style={{ color: 'var(--text-3)', letterSpacing: '0.06em' }}>OUTPUT</span>
+        <span style={{ color: 'var(--text-3)', letterSpacing: '0.06em' }}>SALIDA</span>
         <span style={{ color: a.color, fontWeight: 500 }}>{a.volume}</span>
       </div>
     </div>

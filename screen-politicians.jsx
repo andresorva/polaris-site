@@ -77,7 +77,7 @@ function PoliticiansScreen({ onNavigate, onSelectPolitician }) {
           <Avatar initials="AO" size={32} gradient="linear-gradient(135deg, #2EE6C8, #4D7CFF)" />
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: 12, fontWeight: 500 }}>Andrés Orvañanos</span>
-            <span className="mono t-3" style={{ fontSize: 10 }}>Founder</span>
+            <span className="mono t-3" style={{ fontSize: 10 }}>Fundador</span>
           </div>
         </div>
       </header>

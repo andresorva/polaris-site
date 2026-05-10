@@ -63,7 +63,7 @@ const LoginScreen = ({ onNavigate }) => {
             }}>de vuelta.</span>
           </h1>
           <p className="muted" style={{ fontSize: 15, lineHeight: 1.55, marginTop: 24 }}>
-            Sala de operaciones lista. Inicia sesión para acceder a tu workspace de inteligencia política.
+            Sala de operaciones lista. Inicia sesión para acceder a tu entorno de inteligencia política.
           </p>
 
           {/* Live status mini-panel */}
@@ -173,7 +173,7 @@ const LoginScreen = ({ onNavigate }) => {
               </div>
               <div className="display" style={{ fontSize: 18, fontWeight: 500 }}>Estableciendo sesión segura</div>
               <div className="muted mono" style={{ fontSize: 12, marginTop: 12, letterSpacing: '0.04em' }}>
-                Verificando permisos · Sincronizando workspace
+                Verificando permisos · Sincronizando panel
               </div>
               <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>

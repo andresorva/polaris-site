@@ -167,8 +167,8 @@ function OverviewTab({ politician, setTab }) {
                      sparkData={isZeroActivity ? undefined : sparkB}
                      accent="#4D7CFF" />
               </ExpandableChart>
-              <ExpandableChart title="Alcance" description="Engagement total (likes + replies + shares + retweets) acumulado de todas las menciones en las últimas 24h.">
-                <KPI label="ALCANCE"
+              <ExpandableChart title="Interaccion 24h" description="Suma de interacciones (likes + replies + shares + retweets) acumuladas en las menciones de las ultimas 24h.">
+                <KPI label="INTERACCION 24H"
                      value={reachValue}
                      sub={isZeroActivity ? 'Sin actividad reciente' : undefined}
                      delta={isZeroActivity ? undefined : 8.1}
@@ -193,7 +193,7 @@ function OverviewTab({ politician, setTab }) {
           <div className="card card-pad">
             <div className="section-h">
               <div>
-                <h3>Sentimiento en el tiempo</h3>
+                <h3>Sentimiento en el tiempo <DataLabel type="demo" inline /></h3>
                 <div className="t-3" style={{ fontSize: 12 }}>Distribución diaria · positivo / neutral / negativo</div>
               </div>
               <div className="flex gap-3">
@@ -212,7 +212,7 @@ function OverviewTab({ politician, setTab }) {
                 ['Volatilidad', 'Moderada', 'σ = 8.4 puntos', '#FFB546'],
               ].map((s, i) => (
                 <div key={i}>
-                  <div className="mono t-3" style={{ fontSize: 9, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{s[0]}</div>
+                  <div className="mono t-3" style={{ fontSize: 9, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{s[0]} <DataLabel type="demo" inline /></div>
                   <div className="display" style={{ fontSize: 16, fontWeight: 500, marginTop: 4, color: s[3] }}>{s[1]}</div>
                   <div className="t-3" style={{ fontSize: 11, marginTop: 2 }}>{s[2]}</div>
                 </div>

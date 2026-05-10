@@ -711,7 +711,7 @@ function LiveQueryResults({ politicianId, params, onClose }) {
           <div>
             <div className="display" style={{ fontSize: 18, fontWeight: 500 }}>Live Query: <span style={{ color: 'var(--teal)' }}>"{params.query}"</span></div>
             <div className="t-3 mono" style={{ fontSize: 11, marginTop: 4 }}>
-              {events.totalCollected} mentions · {events.elapsed.toFixed(1)}s elapsed
+              {events.totalCollected} menciones · {events.elapsed.toFixed(1)}s transcurridos
             </div>
           </div>
           <button className="expandable-chart-close" onClick={onClose} aria-label="Cerrar"><Icon name="x" size={20} /></button>
@@ -734,8 +734,8 @@ function LiveQueryResults({ politicianId, params, onClose }) {
                 <span className="dot live" />
                 <div className="t-2" style={{ fontSize: 13 }}>
                   {events.totalCollected === 0 ? 'Buscando en plataformas…' :
-                   events.sentimentTotal === 0 ? `${events.totalCollected} mentions · iniciando análisis…` :
-                   `${events.sentimentProcessed}/${events.sentimentTotal} mentions analizadas`}
+                   events.sentimentTotal === 0 ? `${events.totalCollected} menciones · iniciando analisis…` :
+                   `${events.sentimentProcessed}/${events.sentimentTotal} menciones analizadas`}
                 </div>
               </div>
               <div style={{ height: 4, background: 'var(--bg-3)', borderRadius: 999, overflow: 'hidden' }}>
@@ -762,7 +762,7 @@ function LiveQueryResults({ politicianId, params, onClose }) {
           )}
           {events.mentions.length > 0 && (
             <div className="card card-pad" style={{ padding: 0, overflow: 'hidden' }}>
-              <div className="mono t-3" style={{ fontSize: 10, padding: '12px 16px', letterSpacing: '0.1em', textTransform: 'uppercase', borderBottom: '1px solid var(--line-1)' }}>Top {Math.min(events.mentions.length, 10)} mentions</div>
+              <div className="mono t-3" style={{ fontSize: 10, padding: '12px 16px', letterSpacing: '0.1em', textTransform: 'uppercase', borderBottom: '1px solid var(--line-1)' }}>Top {Math.min(events.mentions.length, 10)} menciones</div>
               {events.mentions.slice(0, 10).map((m, i) => (
                 <div key={i} style={{ padding: '12px 16px', borderBottom: i < 9 ? '1px solid var(--line-1)' : 'none', display: 'flex', gap: 10 }}>
                   <PlatformChip platform={m.platform} size={20} />
