@@ -1233,7 +1233,7 @@ function PullToRefreshIndicator({ pullDistance, isRefreshing, threshold = 80 }) 
       transform: `translate(-50%, ${Math.min(pullDistance - 28, threshold - 28)}px)`,
       width: 36, height: 36,
       borderRadius: '50%',
-      background: 'rgba(15, 22, 38, 0.92)',
+      background: 'var(--bg-2)',
       border: '1px solid var(--line-2)',
       backdropFilter: 'blur(20px)',
       WebkitBackdropFilter: 'blur(20px)',

@@ -55,7 +55,7 @@ function PoliticiansScreen({ onNavigate, onSelectPolitician }) {
       <header style={{
         padding: '14px 32px',
         borderBottom: '1px solid var(--line-1)',
-        background: 'rgba(5,7,13,0.85)',
+        background: 'color-mix(in srgb, var(--bg-0) 85%, transparent)',
         backdropFilter: 'blur(20px)',
         position: 'sticky', top: 0, zIndex: 40,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',

@@ -103,7 +103,7 @@ function DailyBriefTab({ politician, deepLinkDate }) {
         {!state.loading && state.brief && (
           <div className="card card-pad" style={{
             padding: '32px 40px',
-            background: 'linear-gradient(180deg, rgba(15,22,38,0.7), rgba(10,14,26,0.5))',
+            background: 'var(--bg-2)',
             backdropFilter: 'blur(20px)',
             border: '1px solid var(--line-2)',
             borderRadius: 16,

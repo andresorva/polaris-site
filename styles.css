@@ -178,6 +178,8 @@ a { color: inherit; text-decoration: none; }
   background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.16); background-clip: content-box; border: 2px solid transparent; }
+[data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(10, 14, 26, 0.15); background-clip: content-box; }
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: rgba(10, 14, 26, 0.25); background-clip: content-box; }
 
 /* Selection */
 ::selection { background: var(--teal-glow); color: var(--text-1); }
@@ -1148,6 +1150,10 @@ a { color: inherit; text-decoration: none; }
   transition: opacity 200ms var(--ease), transform 200ms var(--ease);
   z-index: 100;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+[data-theme="light"] [data-polaris-tooltip]::after {
+  background: rgba(10, 14, 26, 0.92);
+  color: var(--bg-0);
 }
 [data-polaris-tooltip]:hover::after {
   opacity: 1;
