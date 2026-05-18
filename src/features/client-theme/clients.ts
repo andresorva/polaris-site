@@ -1,6 +1,7 @@
 export type ClientTheme = {
   id: string
   display_name: string
+  politician_id: string
   primary: string
   primary_dark: string
   primary_light: string
@@ -14,6 +15,7 @@ export const CLIENTS: ClientTheme[] = [
   {
     id: 'orvananos',
     display_name: 'Carlos Orvananos',
+    politician_id: '65dc08f0-8fe9-463f-880f-36b5da66ebe6',
     primary: '#0066CC',
     primary_dark: '#003D7A',
     primary_light: '#3D8BDB',
@@ -24,6 +26,7 @@ export const CLIENTS: ClientTheme[] = [
   {
     id: 'astudillo',
     display_name: 'Ricardo Astudillo',
+    politician_id: '312af85e-af56-4304-85e2-be0721ffda14',
     primary: '#7E1F3D',
     primary_dark: '#5A1429',
     primary_light: '#A5364E',

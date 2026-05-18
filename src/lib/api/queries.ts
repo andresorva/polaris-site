@@ -13,9 +13,11 @@ import { useQuery } from '@tanstack/react-query'
 import { apiGet, apiPost } from './client'
 import { ENDPOINTS } from './endpoints'
 import type {
+  Alert,
   CoordinationGroupsResponse,
   CrisisSignalsResponse,
   DailyBrief,
+  DailyMetricsResponse,
   Freshness,
   Health,
   LiveQueryRequest,
@@ -75,11 +77,24 @@ export function useTimeseries(politicianId: string, options: TimeseriesOptions =
   return useQuery({
     queryKey: ['timeseries', politicianId, interval, days, since, until],
     queryFn: () =>
-      apiGet<Timeseries>(ENDPOINTS.timeseries(politicianId), {
+      apiGet<Timeseries>(ENDPOINTS.timeseries, {
+        politician_id: politicianId,
         interval,
         days,
         ...(since ? { since } : {}),
         ...(until ? { until } : {}),
+      }),
+    enabled: !!politicianId,
+  })
+}
+
+export function useDailyMetrics(politicianId: string, days = 30) {
+  return useQuery({
+    queryKey: ['metrics-daily', politicianId, days],
+    queryFn: () =>
+      apiGet<DailyMetricsResponse>(ENDPOINTS.metricsDaily, {
+        politician_id: politicianId,
+        days,
       }),
     enabled: !!politicianId,
   })
@@ -181,7 +196,12 @@ export function useMentions(politicianId: string, options: MentionsOptions = {})
 // Topics / Freshness / Daily brief
 // ============================================================================
 
-export function useTopics(politicianId: string, days = 7) {
+interface TopicsOptions {
+  days?: number
+}
+
+export function useTopics(politicianId: string, options: TopicsOptions = {}) {
+  const { days = 7 } = options
   return useQuery({
     queryKey: ['topics', politicianId, days],
     queryFn: () => apiGet<TopicsResponse>(ENDPOINTS.topics(politicianId), { days }),
@@ -241,6 +261,19 @@ export function useCoordinationGroups(
         active_only,
         limit,
       }),
+    enabled: !!politicianId,
+  })
+}
+
+// ============================================================================
+// Alerts
+// ============================================================================
+
+export function useAlerts(politicianId: string) {
+  return useQuery({
+    queryKey: ['alerts', politicianId],
+    queryFn: () =>
+      apiGet<Alert[]>(ENDPOINTS.alerts, { politician_id: politicianId }),
     enabled: !!politicianId,
   })
 }

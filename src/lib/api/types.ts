@@ -304,3 +304,44 @@ export interface LiveQueryResponse {
   confidence?: number
   [key: string]: unknown
 }
+
+// ============================================================================
+// Alerts
+// ============================================================================
+
+export type AlertSeverity = 'warning' | 'watch' | 'info' | 'critical'
+
+export interface Alert {
+  id: string
+  politician_id: string
+  alert_type: string
+  severity: AlertSeverity
+  title: string
+  description: string
+  z_score?: number | null
+  is_resolved: boolean
+  resolved_at: string | null
+  created_at: string
+  // Backend may include additional metadata
+  [key: string]: unknown
+}
+
+// ============================================================================
+// Daily metrics
+// ============================================================================
+
+export interface DailyMetric {
+  metric_date: string
+  ppi_score: number | null
+  sov_24h: number | null
+  mention_count: number | null
+  avg_sentiment: number | null
+  total_engagement: number | null
+  [key: string]: unknown
+}
+
+export interface DailyMetricsResponse {
+  politician_id: string
+  days: number
+  metrics: DailyMetric[]
+}

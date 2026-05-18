@@ -1,7 +1,9 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from './features/client-theme/ThemeProvider'
 import { RequireAuth } from './features/auth/RequireAuth'
+import { queryClient } from './lib/api/queryClient'
 
 const LoginPage = lazy(() => import('./routes/login'))
 const DevComponentsPage = lazy(() => import('./routes/dev/components'))
@@ -33,33 +35,35 @@ function PageFallback() {
 function App() {
   return (
     <ThemeProvider>
-      <BrowserRouter>
-        <Suspense fallback={<PageFallback />}>
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/dev/components" element={<DevComponentsPage />} />
-            <Route
-              path="/dashboard"
-              element={
-                <RequireAuth>
-                  <DashboardLayout />
-                </RequireAuth>
-              }
-            >
-              <Route index element={<VistaGeneral />} />
-              <Route path="pulso" element={<Pulso />} />
-              <Route path="sentiment" element={<Sentiment />} />
-              <Route path="temas" element={<Temas />} />
-              <Route path="voces" element={<Voces />} />
-              <Route path="alertas" element={<Alertas />} />
-              <Route path="briefing" element={<Briefing />} />
-              <Route path="fuentes" element={<Fuentes />} />
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <Suspense fallback={<PageFallback />}>
+            <Routes>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/dev/components" element={<DevComponentsPage />} />
+              <Route
+                path="/dashboard"
+                element={
+                  <RequireAuth>
+                    <DashboardLayout />
+                  </RequireAuth>
+                }
+              >
+                <Route index element={<VistaGeneral />} />
+                <Route path="pulso" element={<Pulso />} />
+                <Route path="sentiment" element={<Sentiment />} />
+                <Route path="temas" element={<Temas />} />
+                <Route path="voces" element={<Voces />} />
+                <Route path="alertas" element={<Alertas />} />
+                <Route path="briefing" element={<Briefing />} />
+                <Route path="fuentes" element={<Fuentes />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+        </BrowserRouter>
+      </QueryClientProvider>
     </ThemeProvider>
   )
 }
