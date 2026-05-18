@@ -29,3 +29,6 @@ dist-ssr
 
 # npm cache override
 /tmp/npm-cache-polaris
+
+# Vite local cache
+.vite/
