@@ -1,25 +1,31 @@
-import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
+import { lazy, Suspense } from 'react'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ThemeProvider } from './features/client-theme/ThemeProvider'
-import DevComponentsPage from './routes/dev/components'
+import { RequireAuth } from './features/auth/RequireAuth'
 
-function LandingPage() {
+const LoginPage = lazy(() => import('./routes/login'))
+const DevComponentsPage = lazy(() => import('./routes/dev/components'))
+const DashboardLayout = lazy(
+  () => import('./components/layout/DashboardLayout'),
+)
+const VistaGeneral = lazy(() => import('./routes/dashboard/index'))
+const Pulso = lazy(() => import('./routes/dashboard/pulso'))
+const Sentiment = lazy(() => import('./routes/dashboard/sentiment'))
+const Temas = lazy(() => import('./routes/dashboard/temas'))
+const Voces = lazy(() => import('./routes/dashboard/voces'))
+const Alertas = lazy(() => import('./routes/dashboard/alertas'))
+const Briefing = lazy(() => import('./routes/dashboard/briefing'))
+const Fuentes = lazy(() => import('./routes/dashboard/fuentes'))
+const NotFound = lazy(() => import('./routes/not-found'))
+
+function PageFallback() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface text-ink">
-      <div className="text-center">
-        <h1 className="text-6xl font-bold tracking-tight">POLARIS</h1>
-        <p className="mt-4 text-xl font-mono text-ink-muted">
-          Political Analytics &amp; Real-time Intelligence System
-        </p>
-        <p className="mt-2 text-sm text-ink-subtle">v2.0.0-rebuild</p>
-        <p className="mt-8">
-          <Link
-            to="/dev/components"
-            className="text-sm font-mono underline text-primary hover:text-primary-dark"
-          >
-            /dev/components
-          </Link>
-        </p>
-      </div>
+    <div
+      className="min-h-screen flex items-center justify-center bg-surface text-ink"
+      role="status"
+      aria-label="Cargando"
+    >
+      <div className="text-xs font-mono text-ink-subtle">Cargando...</div>
     </div>
   )
 }
@@ -28,10 +34,31 @@ function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/dev/components" element={<DevComponentsPage />} />
-        </Routes>
+        <Suspense fallback={<PageFallback />}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/dev/components" element={<DevComponentsPage />} />
+            <Route
+              path="/dashboard"
+              element={
+                <RequireAuth>
+                  <DashboardLayout />
+                </RequireAuth>
+              }
+            >
+              <Route index element={<VistaGeneral />} />
+              <Route path="pulso" element={<Pulso />} />
+              <Route path="sentiment" element={<Sentiment />} />
+              <Route path="temas" element={<Temas />} />
+              <Route path="voces" element={<Voces />} />
+              <Route path="alertas" element={<Alertas />} />
+              <Route path="briefing" element={<Briefing />} />
+              <Route path="fuentes" element={<Fuentes />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </ThemeProvider>
   )
