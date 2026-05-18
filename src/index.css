@@ -1,0 +1,30 @@
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --polaris-primary: #0066CC;
+  --polaris-primary-dark: #003D7A;
+  --polaris-primary-light: #3D8BDB;
+  --polaris-accent: #F4A53A;
+  --polaris-bg: #FFFFFF;
+  --polaris-text: #0A0A0A;
+}
+
+[data-theme="dark"] {
+  --polaris-bg: #0A0A0A;
+  --polaris-text: #FAFAFA;
+}
+
+body {
+  background: var(--polaris-bg);
+  color: var(--polaris-text);
+  font-family: theme('fontFamily.sans');
+}

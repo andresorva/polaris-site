@@ -1,0 +1,32 @@
+name: Deploy POLARIS Frontend
+on:
+  push:
+    branches: [main, rebuild-frontend-v2]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint --if-present
+      - run: npm run typecheck --if-present
+      - run: npm test -- --run --if-present
+      - run: npm run build
+        env:
+          VITE_API_BASE_URL: https://web-production-d6505.up.railway.app
+      - if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+      - if: github.ref == 'refs/heads/main'
+        uses: actions/deploy-pages@v4
