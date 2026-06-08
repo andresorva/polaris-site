@@ -1,8 +1,11 @@
 /**
  * Smoke tests for `apiGet`/`apiPost`.
  *
- * Strategy: mock global `fetch`. Use fake timers to bypass exponential-backoff
- * sleeps so retry tests don't actually wait 3s.
+ * Strategy: mock global `fetch`. Use fake timers and drive them explicitly
+ * with `vi.runAllTimersAsync()` so the exponential-backoff sleeps resolve
+ * instantly and DETERMINISTICALLY — never waiting real wall-clock time.
+ * (The previous `shouldAdvanceTime: true` coupled fake timers to real time,
+ * which raced on slow CI runners and made these tests flaky, blocking deploy.)
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -11,7 +14,7 @@ import { ApiError, apiGet, apiPost } from '../client'
 const fetchMock = vi.fn()
 
 beforeEach(() => {
-  vi.useFakeTimers({ shouldAdvanceTime: true })
+  vi.useFakeTimers()
   fetchMock.mockReset()
   vi.stubGlobal('fetch', fetchMock)
 })
@@ -51,7 +54,10 @@ describe('apiGet', () => {
       .mockResolvedValueOnce(jsonResponse(503, { error: 'still boom' }))
       .mockResolvedValueOnce(jsonResponse(200, { ok: true }))
 
-    const result = await apiGet<{ ok: boolean }>('/flaky')
+    const promise = apiGet<{ ok: boolean }>('/flaky')
+    // Drive the 1s + 2s backoff sleeps to completion under fake timers.
+    await vi.runAllTimersAsync()
+    const result = await promise
     expect(result).toEqual({ ok: true })
     expect(fetchMock).toHaveBeenCalledTimes(3)
   })
@@ -82,8 +88,11 @@ describe('apiGet', () => {
     })
 
     const promise = apiGet('/slow')
-    // Advance past the 10s timeout AND both retry backoffs (1s + 2s).
-    await vi.advanceTimersByTimeAsync(30_000)
+    // Prevent an unhandled-rejection warning while we drive the timers; the
+    // assertions below are what actually validate the rejection.
+    promise.catch(() => {})
+    // Drive the 10s timeout on each attempt AND both retry backoffs (1s + 2s).
+    await vi.runAllTimersAsync()
 
     await expect(promise).rejects.toBeInstanceOf(ApiError)
     await expect(promise).rejects.toMatchObject({ status: 0 })
