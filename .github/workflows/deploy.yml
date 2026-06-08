@@ -20,7 +20,11 @@ jobs:
       - run: npm ci
       - run: npm run lint --if-present
       - run: npm run typecheck --if-present
-      - run: npm test -- --run --if-present
+      # NOTE: --if-present must NOT go here — after `--` it reaches vitest,
+      # which errors `Unknown option --ifPresent` and fails the step on EVERY
+      # run (this silently blocked all deploys since 2026-05-18). The `test`
+      # script always exists, so the guard is unnecessary anyway.
+      - run: npm test -- --run
       - run: npm run build
         env:
           VITE_API_BASE_URL: https://web-production-d6505.up.railway.app
