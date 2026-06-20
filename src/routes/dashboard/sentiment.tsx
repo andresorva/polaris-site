@@ -1,24 +1,47 @@
+/**
+ * Pantalla "Sentimiento" (mockup 06).
+ *
+ * Owner: routes/dashboard/sentiment.tsx. Importa SOLO exports documentados por
+ * ruta directa. Cuatro estados por panel (loading / empty / error / data),
+ * responsive mobile-first, respeta prefers-reduced-motion (los componentes de
+ * chart ya desactivan animacion donde aplica). REGLA 79: cero acentos / n-tilde
+ * en strings visibles.
+ *
+ * Layout (espeja el mockup):
+ *   - Filtros: scope + ventana (los unicos params reales del breakdown).
+ *   - grid-2: PlatformStackedBars (FE-computed) + GlobalSentimentBar.
+ *   - SentimentDonut: distribucion global 5-cat.
+ *   - grid-2: SentimentEvolution (5 series incl sarcastic) + Drivers.
+ *       Drivers NO tiene endpoint agregado target-aware -> empty-state honesto.
+ *   - grid-2: Top menciones positivas + negativas (FE-computed sobre /mentions).
+ *
+ * Honestidad de datos:
+ *   - GlobalSentimentBar + SentimentDonut salen de /sentiment-breakdown (real).
+ *   - PlatformStackedBars + Top menciones se computan FE-side sobre las ultimas
+ *     500 menciones (filtrando google_trends): NO representativo de todo el
+ *     historial, por eso lleva caveat + <DemoBadge/>.
+ *   - SentimentEvolution usa sentiment_breakdown por bucket de /timeseries; los
+ *     buckets pueden venir vacios pre-fix B-15 -> empty-state honesto.
+ */
+
 import { useMemo, useState } from 'react'
-import {
-  Heart,
-  Layers,
-  MessageSquare,
-  TrendingUp,
-  Hash,
-  ThumbsDown,
-  ThumbsUp,
-} from 'lucide-react'
-import { PageHeader } from '../../components/layout/PageHeader'
+import { Hash, MessageSquare, ThumbsDown, ThumbsUp, TrendingUp } from 'lucide-react'
+
 import { Card } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'
-import { DonutChart } from '../../components/data-display/DonutChart'
-import { TimeSeriesChart } from '../../components/data-display/TimeSeriesChart'
 import { EmptyState } from '../../components/states/EmptyState'
 import { ErrorState } from '../../components/states/ErrorState'
-import {
-  SkeletonChart,
-  SkeletonTable,
-} from '../../components/states/LoadingSkeleton'
+import { SkeletonTable } from '../../components/states/Skeleton'
+import { DemoBadge } from '../../components/states/DemoBadge'
+
+import { PlatformStackedBars } from '../../components/charts/PlatformStackedBars'
+import type { PlatformSentimentRow } from '../../components/charts/PlatformStackedBars'
+import { GlobalSentimentBar } from '../../components/charts/GlobalSentimentBar'
+import { SentimentDonut } from '../../components/charts/SentimentDonut'
+import { SentimentEvolution } from '../../components/charts/SentimentEvolution'
+import type { SentimentEvolutionPoint } from '../../components/charts/SentimentEvolution'
+import type { SentimentCounts } from '../../components/charts/sentimentColors'
+
 import { useClientTheme } from '../../features/client-theme/useClientTheme'
 import {
   useMentions,
@@ -27,17 +50,18 @@ import {
 } from '../../lib/api/queries'
 import type {
   Mention,
-  SentimentLabel,
+  SentimentBreakdownCounts,
   SentimentScope,
   TimeseriesBucket,
 } from '../../lib/api/types'
+import { platformLabel } from '../../lib/utils/platforms'
 import { cn } from '../../lib/utils/cn'
 
 // ---------------------------------------------------------------------------
-// Filter constants
+// Filtros
 // ---------------------------------------------------------------------------
 
-type WindowDays = 7 | 30 | 90
+type WindowDays = 7 | 30 | 60 | 90
 
 const SCOPES: Array<{ value: SentimentScope; label: string }> = [
   { value: 'all', label: 'Todos' },
@@ -49,20 +73,28 @@ const SCOPES: Array<{ value: SentimentScope; label: string }> = [
 const WINDOWS: Array<{ value: WindowDays; label: string }> = [
   { value: 7, label: '7d' },
   { value: 30, label: '30d' },
+  { value: 60, label: '60d' },
   { value: 90, label: '90d' },
 ]
 
-const SENTIMENT_COLORS: Record<SentimentLabel, string> = {
-  positive: 'var(--polaris-sentiment-positive)',
-  negative: 'var(--polaris-sentiment-negative)',
-  neutral: 'var(--polaris-sentiment-neutral)',
-  mixed: 'var(--polaris-sentiment-mixed)',
-  sarcastic: 'var(--polaris-accent)',
+const SCOPE_LABEL: Record<SentimentScope, string> = {
+  all: 'todos',
+  third_party: 'terceros',
+  own: 'propio',
+  comments: 'comentarios',
 }
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function safeNum(v: unknown): number {
+  return typeof v === 'number' && Number.isFinite(v) ? v : 0
+}
+
+function isNotGoogleTrends(m: Mention): boolean {
+  return m.platform !== 'google_trends'
+}
 
 function engagementSum(m: Mention): number {
   return Object.values(m.engagement_metrics ?? {}).reduce<number>(
@@ -71,180 +103,171 @@ function engagementSum(m: Mention): number {
   )
 }
 
-function isNotGoogleTrends(m: Mention): boolean {
-  return m.platform !== 'google_trends'
+/** Adapta el breakdown del backend al shape SentimentCounts de los charts. */
+function toCounts(b: SentimentBreakdownCounts | undefined): SentimentCounts | null {
+  if (!b) return null
+  return {
+    positive: safeNum(b.positive),
+    negative: safeNum(b.negative),
+    neutral: safeNum(b.neutral),
+    mixed: safeNum(b.mixed),
+    sarcastic: safeNum(b.sarcastic),
+  }
 }
 
-function safeNum(v: unknown): number {
-  return typeof v === 'number' && Number.isFinite(v) ? v : 0
-}
-
-// ---------------------------------------------------------------------------
-// Per-platform stacked bars (YELLOW — FE-computed)
-// ---------------------------------------------------------------------------
-
-type PlatformRow = {
-  platform: string
-  positive: number
-  negative: number
-  neutral: number
-  mixed: number
-  sarcastic: number
-  total: number
-}
-
-function buildPlatformRows(mentions: Mention[]): PlatformRow[] {
-  const byPlatform = new Map<string, PlatformRow>()
+/** Agrupa menciones por plataforma -> filas para PlatformStackedBars. */
+function buildPlatformRows(mentions: Mention[]): PlatformSentimentRow[] {
+  const byPlatform = new Map<string, SentimentCounts & { _total: number }>()
   for (const m of mentions) {
     if (!isNotGoogleTrends(m)) continue
-    const key = m.platform
-    const row = byPlatform.get(key) ?? {
-      platform: key,
-      positive: 0,
-      negative: 0,
-      neutral: 0,
-      mixed: 0,
-      sarcastic: 0,
-      total: 0,
-    }
     const label = m.sentiment_label
-    if (label === 'positive') row.positive += 1
-    else if (label === 'negative') row.negative += 1
-    else if (label === 'neutral') row.neutral += 1
-    else if (label === 'mixed') row.mixed += 1
-    else if (label === 'sarcastic') row.sarcastic += 1
-    if (label) row.total += 1
-    byPlatform.set(key, row)
+    if (!label) continue
+    const cur =
+      byPlatform.get(m.platform) ??
+      ({
+        positive: 0,
+        negative: 0,
+        neutral: 0,
+        mixed: 0,
+        sarcastic: 0,
+        _total: 0,
+      } as SentimentCounts & { _total: number })
+    cur[label] = (cur[label] ?? 0) + 1
+    cur._total += 1
+    byPlatform.set(m.platform, cur)
   }
-  return Array.from(byPlatform.values())
-    .filter((r) => r.total > 0)
-    .sort((a, b) => b.total - a.total)
+  return Array.from(byPlatform.entries())
+    .map(([platform, c]) => ({
+      platform: platformLabel(platform),
+      counts: {
+        positive: c.positive,
+        negative: c.negative,
+        neutral: c.neutral,
+        mixed: c.mixed,
+        sarcastic: c.sarcastic,
+      } as SentimentCounts,
+      _total: c._total,
+    }))
+    .sort((a, b) => b._total - a._total)
+    .map(({ platform, counts }) => ({ platform, counts }))
 }
 
-function PlatformStackedBars({ rows }: { rows: PlatformRow[] }) {
-  if (rows.length === 0) {
-    return (
-      <EmptyState
-        title="Sin distribucion por plataforma"
-        description="Las ultimas 500 menciones (filtrando google_trends) no tienen sentiment_label asignado."
-      />
-    )
-  }
-  const maxTotal = Math.max(...rows.map((r) => r.total))
+// ---------------------------------------------------------------------------
+// Segmented control reusable (inline; no se edita ningun archivo compartido)
+// ---------------------------------------------------------------------------
+
+function SegControl<T extends string | number>({
+  label,
+  ariaLabel,
+  options,
+  value,
+  onChange,
+}: {
+  label: string
+  ariaLabel: string
+  options: Array<{ value: T; label: string }>
+  value: T
+  onChange: (v: T) => void
+}) {
   return (
-    <div className="space-y-3">
-      {rows.map((r) => {
-        const widthScale = maxTotal > 0 ? r.total / maxTotal : 0
-        const segments: Array<{
-          key: SentimentLabel
-          count: number
-        }> = [
-          { key: 'positive', count: r.positive },
-          { key: 'neutral', count: r.neutral },
-          { key: 'mixed', count: r.mixed },
-          { key: 'sarcastic', count: r.sarcastic },
-          { key: 'negative', count: r.negative },
-        ]
-        return (
-          <div key={r.platform} className="flex items-center gap-3">
-            <div className="w-32 shrink-0 text-sm text-ink truncate font-mono">
-              {r.platform}
-            </div>
-            <div
-              className="flex-1 h-5 rounded-md overflow-hidden bg-surface flex"
-              style={{ width: `${widthScale * 100}%`, minWidth: '60px' }}
-              role="img"
-              aria-label={`Distribucion sentimiento ${r.platform}: ${r.positive} positivas, ${r.negative} negativas, ${r.neutral} neutrales, ${r.mixed} mixtas, ${r.sarcastic} sarcasticas`}
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+      <span className="text-xs font-mono uppercase tracking-wide text-ink-muted">
+        {label}
+      </span>
+      <div
+        role="radiogroup"
+        aria-label={ariaLabel}
+        className="inline-flex flex-wrap rounded-md border border-border-subtle overflow-hidden bg-sunken"
+      >
+        {options.map((opt) => {
+          const active = value === opt.value
+          return (
+            <button
+              key={String(opt.value)}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => onChange(opt.value)}
+              className={cn(
+                'px-3 py-1.5 text-xs font-medium transition-colors',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
+                active
+                  ? 'bg-primary text-white'
+                  : 'text-ink-muted hover:text-ink hover:bg-card',
+              )}
             >
-              {segments.map((seg) => {
-                if (seg.count === 0) return null
-                const pct = (seg.count / r.total) * 100
-                return (
-                  <div
-                    key={seg.key}
-                    style={{
-                      width: `${pct}%`,
-                      backgroundColor: SENTIMENT_COLORS[seg.key],
-                    }}
-                    title={`${seg.key}: ${seg.count} (${pct.toFixed(1)}%)`}
-                  />
-                )
-              })}
-            </div>
-            <div className="w-16 text-right shrink-0 font-mono text-xs text-ink-muted tabular-nums">
-              {r.total}
-            </div>
-          </div>
-        )
-      })}
-      <div className="flex flex-wrap gap-3 text-xs text-ink-muted pt-2 border-t border-border">
-        {(['positive', 'neutral', 'mixed', 'sarcastic', 'negative'] as const).map(
-          (k) => (
-            <span key={k} className="flex items-center gap-1.5">
-              <span
-                className="inline-block w-2.5 h-2.5 rounded-sm"
-                style={{ backgroundColor: SENTIMENT_COLORS[k] }}
-                aria-hidden="true"
-              />
-              <span className="capitalize">{k}</span>
-            </span>
-          ),
-        )}
+              {opt.label}
+            </button>
+          )
+        })}
       </div>
     </div>
   )
 }
 
 // ---------------------------------------------------------------------------
-// Top mention card
+// Tarjeta de mencion (mockup .mention)
 // ---------------------------------------------------------------------------
 
 function MentionCard({
   m,
   engagement,
+  tone,
 }: {
   m: Mention
   engagement: number
+  tone: 'positive' | 'negative'
 }) {
+  const score = m.sentiment_score
+  const scoreStr =
+    typeof score === 'number'
+      ? `${score >= 0 ? '+' : ''}${score.toFixed(2)}`
+      : null
   return (
-    <li className="border-b border-border pb-3 last:border-b-0 last:pb-0">
-      <div className="text-xs text-ink-muted font-mono flex items-center gap-2 flex-wrap">
-        <span>{m.platform}</span>
+    <li className="rounded-sm border border-border-subtle bg-card p-3.5">
+      <div className="flex items-center gap-2 text-[11px] text-ink-subtle">
+        <span className="font-mono">{platformLabel(m.platform)}</span>
         <span aria-hidden="true">·</span>
-        <span className="truncate max-w-[180px]">{m.author ?? '(anon)'}</span>
-        <span aria-hidden="true">·</span>
-        <span>
-          engagement{' '}
-          <span className="tabular-nums">{engagement.toLocaleString('es-MX')}</span>
+        <span className="font-semibold text-ink-muted truncate max-w-[160px]">
+          {m.author ?? '(anon)'}
         </span>
-        {typeof m.sentiment_score === 'number' ? (
-          <>
-            <span aria-hidden="true">·</span>
-            <span className="tabular-nums">
-              score {m.sentiment_score.toFixed(2)}
-            </span>
-          </>
+        {scoreStr ? (
+          <span
+            className={cn(
+              'ml-auto rounded-full px-2 py-0.5 font-mono text-[11px] font-semibold',
+              tone === 'negative'
+                ? 'text-sentiment-negative bg-sentiment-negative/15'
+                : 'text-sentiment-positive bg-sentiment-positive/15',
+            )}
+          >
+            {scoreStr}
+          </span>
         ) : null}
       </div>
-      <div className="text-sm text-ink line-clamp-3 mt-1">
+      <p className="mt-1.5 text-sm leading-relaxed text-ink line-clamp-3">
         {(m.content ?? '').slice(0, 280) || '(sin contenido)'}
+      </p>
+      <div className="mt-2 flex items-center gap-3 text-[11px] text-ink-subtle">
+        <span className="font-mono tabular-nums">
+          engagement {engagement.toLocaleString('en-US')}
+        </span>
+        {m.url ? (
+          <a
+            href={m.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-auto font-mono text-primary underline underline-offset-2 hover:no-underline truncate max-w-[160px]"
+          >
+            ver fuente
+          </a>
+        ) : null}
       </div>
-      {m.url ? (
-        <a
-          href={m.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs font-mono text-primary underline underline-offset-2 hover:no-underline mt-1 inline-block truncate max-w-full"
-        >
-          {m.url}
-        </a>
-      ) : null}
     </li>
   )
 }
 
 // ---------------------------------------------------------------------------
-// Sentimiento detallado route
+// Pantalla
 // ---------------------------------------------------------------------------
 
 export function Sentiment() {
@@ -254,61 +277,27 @@ export function Sentiment() {
   const [scope, setScope] = useState<SentimentScope>('all')
   const [windowDays, setWindowDays] = useState<WindowDays>(30)
 
-  // 1. Global breakdown (GREEN)
-  const sentQ = useSentimentBreakdown(politicianId, {
-    scope,
-    days: windowDays,
-  })
+  // 1. Breakdown global (real) -> GlobalSentimentBar + SentimentDonut.
+  const sentQ = useSentimentBreakdown(politicianId, { scope, days: windowDays })
 
-  // 2. Per-platform: pull 500 mentions, FE-compute
+  // 2. Menciones (FE-compute por plataforma + top voces). 500 recientes.
   const mentionsQ = useMentions(politicianId, { limit: 500 })
 
-  // 3. Timeseries 60d for global sentiment evolution
-  const timeseriesQ = useTimeseries(politicianId, {
-    days: 60,
-    interval: 'day',
-  })
+  // 3. Timeseries 60d -> evolucion del sentimiento por bucket.
+  const timeseriesQ = useTimeseries(politicianId, { days: 60, interval: 'day' })
 
   // -------------------------------------------------------------------------
-  // Derived data
+  // Derivados
   // -------------------------------------------------------------------------
 
-  const sentPct = sentQ.data?.breakdown?.pct
-  const sentTotal = sentQ.data?.breakdown?.total ?? 0
-  const sentCounts = sentQ.data?.breakdown
-  const donutData = sentPct
-    ? [
-        {
-          name: 'Positivo',
-          value: sentPct.positive,
-          color: SENTIMENT_COLORS.positive,
-        },
-        {
-          name: 'Negativo',
-          value: sentPct.negative,
-          color: SENTIMENT_COLORS.negative,
-        },
-        {
-          name: 'Neutral',
-          value: sentPct.neutral,
-          color: SENTIMENT_COLORS.neutral,
-        },
-        {
-          name: 'Mixto',
-          value: sentPct.mixed,
-          color: SENTIMENT_COLORS.mixed,
-        },
-        {
-          name: 'Sarcastico',
-          value: sentPct.sarcastic,
-          color: SENTIMENT_COLORS.sarcastic,
-        },
-      ]
-    : []
+  const globalCounts = useMemo(
+    () => toCounts(sentQ.data?.breakdown),
+    [sentQ.data],
+  )
+  const breakdown = sentQ.data?.breakdown
 
   const allMentions = useMemo(
-    () =>
-      (mentionsQ.data ?? []).filter(isNotGoogleTrends),
+    () => (mentionsQ.data ?? []).filter(isNotGoogleTrends),
     [mentionsQ.data],
   )
 
@@ -317,359 +306,277 @@ export function Sentiment() {
     [mentionsQ.data],
   )
 
-  const buckets: TimeseriesBucket[] = timeseriesQ.data?.buckets ?? []
-  const timeseriesData = buckets.map((b) => {
-    const sb = b.sentiment_breakdown ?? {}
-    return {
-      date: b.label ?? b.timestamp,
-      positivo: safeNum(sb.positive),
-      negativo: safeNum(sb.negative),
-      neutral: safeNum(sb.neutral),
-      mixto: safeNum(sb.mixed),
-    }
-  })
-  const hasTimeseriesSignal = timeseriesData.some(
-    (d) => d.positivo + d.negativo + d.neutral + d.mixto > 0,
+  const evolutionData: SentimentEvolutionPoint[] = useMemo(() => {
+    const buckets: TimeseriesBucket[] = timeseriesQ.data?.buckets ?? []
+    return buckets.map((b) => {
+      const sb = b.sentiment_breakdown ?? {}
+      return {
+        label: b.label ?? b.timestamp,
+        positive: safeNum(sb.positive),
+        negative: safeNum(sb.negative),
+        neutral: safeNum(sb.neutral),
+        mixed: safeNum(sb.mixed),
+        // El backend no expone 'sarcastic' por bucket todavia (solo en
+        // breakdown agregado) -> 0 honesto, sin inventar data.
+        sarcastic: 0,
+      }
+    })
+  }, [timeseriesQ.data])
+
+  const hasEvolutionSignal = evolutionData.some(
+    (d) => d.positive + d.negative + d.neutral + d.mixed > 0,
   )
 
-  const topPositive = useMemo(() => {
-    return allMentions
-      .filter((m) => m.sentiment_label === 'positive')
-      .map((m) => ({ mention: m, engagement: engagementSum(m) }))
-      .sort((a, b) => b.engagement - a.engagement)
-      .slice(0, 5)
-  }, [allMentions])
+  const topPositive = useMemo(
+    () =>
+      allMentions
+        .filter((m) => m.sentiment_label === 'positive')
+        .map((m) => ({ mention: m, engagement: engagementSum(m) }))
+        .sort((a, b) => b.engagement - a.engagement)
+        .slice(0, 5),
+    [allMentions],
+  )
 
-  const topNegative = useMemo(() => {
-    return allMentions
-      .filter((m) => m.sentiment_label === 'negative')
-      .map((m) => ({ mention: m, engagement: engagementSum(m) }))
-      .sort((a, b) => b.engagement - a.engagement)
-      .slice(0, 5)
-  }, [allMentions])
+  const topNegative = useMemo(
+    () =>
+      allMentions
+        .filter((m) => m.sentiment_label === 'negative')
+        .map((m) => ({ mention: m, engagement: engagementSum(m) }))
+        .sort((a, b) => b.engagement - a.engagement)
+        .slice(0, 5),
+    [allMentions],
+  )
+
+  const windowLabel = WINDOWS.find((w) => w.value === windowDays)?.label ?? `${windowDays}d`
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
-      <PageHeader
-        title="Sentimiento detallado"
-        subtitle="Distribucion + evolucion + voces extremas"
-      />
+      {/* Page head (espeja .page-head del mockup) */}
+      <header>
+        <div className="text-xs font-mono uppercase tracking-wide text-ink-subtle">
+          Analisis
+        </div>
+        <h1 className="mt-1 text-2xl font-semibold text-ink">Sentimiento</h1>
+        <p className="mt-1 text-sm text-ink-muted max-w-2xl">
+          Como se siente la conversacion sobre {client.display_name}.
+          Distribucion por plataforma, voces extremas y evolucion a 60 dias.
+        </p>
+      </header>
 
-      {/* Filters */}
+      {/* Filtros */}
       <Card>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <span className="text-xs font-mono uppercase tracking-wide text-ink-muted">
-              Scope
-            </span>
-            <div
-              role="radiogroup"
-              aria-label="Scope de menciones"
-              className="inline-flex flex-wrap rounded-md border border-border overflow-hidden bg-surface"
-            >
-              {SCOPES.map((opt) => {
-                const active = scope === opt.value
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    role="radio"
-                    aria-checked={active}
-                    onClick={() => setScope(opt.value)}
-                    className={cn(
-                      'px-3 py-1.5 text-xs font-medium transition-colors',
-                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
-                      active
-                        ? 'bg-primary text-white'
-                        : 'text-ink-muted hover:text-ink hover:bg-surface-elevated',
-                    )}
-                  >
-                    {opt.label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <span className="text-xs font-mono uppercase tracking-wide text-ink-muted">
-              Ventana
-            </span>
-            <div
-              role="radiogroup"
-              aria-label="Ventana de tiempo"
-              className="inline-flex rounded-md border border-border overflow-hidden bg-surface"
-            >
-              {WINDOWS.map((opt) => {
-                const active = windowDays === opt.value
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    role="radio"
-                    aria-checked={active}
-                    onClick={() => setWindowDays(opt.value)}
-                    className={cn(
-                      'px-3 py-1.5 text-xs font-medium transition-colors',
-                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
-                      active
-                        ? 'bg-primary text-white'
-                        : 'text-ink-muted hover:text-ink hover:bg-surface-elevated',
-                    )}
-                  >
-                    {opt.label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+          <SegControl
+            label="Scope"
+            ariaLabel="Scope de menciones"
+            options={SCOPES}
+            value={scope}
+            onChange={setScope}
+          />
+          <SegControl
+            label="Ventana"
+            ariaLabel="Ventana de tiempo"
+            options={WINDOWS}
+            value={windowDays}
+            onChange={setWindowDays}
+          />
         </div>
       </Card>
 
-      {/* Section 1: Distribucion global 5-cat (GREEN) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="lg:col-span-2">
-          <div className="flex items-center gap-2 mb-3">
-            <Layers size={16} className="text-ink-muted" aria-hidden="true" />
-            <h2 className="text-sm font-semibold text-ink">
-              Distribucion global ({windowDays}d · {scope})
-            </h2>
-          </div>
-          {sentQ.isLoading ? (
-            <SkeletonChart />
-          ) : sentQ.isError ? (
-            <ErrorState onRetry={() => sentQ.refetch()} />
-          ) : sentTotal === 0 || donutData.length === 0 ? (
-            <EmptyState
-              title="Sin sentimiento procesado"
-              description="No hay menciones con label de sentimiento en la ventana seleccionada."
-            />
-          ) : (
-            <DonutChart
-              data={donutData}
-              height={280}
-              centerLabel="Menciones"
-              centerValue={sentTotal.toLocaleString('es-MX')}
-              ariaLabel="Distribucion porcentual de sentimiento en 5 categorias"
-            />
-          )}
-        </Card>
+      {/* Fila 1: distribucion por plataforma (FE) + sentimiento global (real) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="relative">
+          <DemoBadge className="absolute right-3 top-3 z-10" />
+          <PlatformStackedBars
+            rows={platformRows}
+            loading={mentionsQ.isLoading}
+            error={mentionsQ.isError}
+            onRetry={() => mentionsQ.refetch()}
+            title="Distribucion por plataforma"
+            hint="ultimas 500 menc."
+          />
+          <p className="mt-2 px-1 text-[11px] italic text-ink-subtle">
+            Computado FE-side sobre las ultimas 500 menciones (filtrando
+            google_trends). No representativo de todo el historial: el backend no
+            expone un endpoint sentiment-by-platform agregado.
+          </p>
+        </div>
 
-        <Card>
-          <h3 className="text-sm font-semibold text-ink mb-3">
-            Conteo por categoria
-          </h3>
-          {sentQ.isLoading ? (
-            <SkeletonTable rows={5} />
-          ) : sentQ.isError || !sentCounts ? (
-            <EmptyState
-              title="Sin conteos"
-              description="No hay datos para esta ventana."
-            />
-          ) : (
-            <ul className="space-y-2">
-              {(
-                [
-                  ['positive', 'Positivo', sentCounts.positive, sentCounts.pct.positive],
-                  ['negative', 'Negativo', sentCounts.negative, sentCounts.pct.negative],
-                  ['neutral', 'Neutral', sentCounts.neutral, sentCounts.pct.neutral],
-                  ['mixed', 'Mixto', sentCounts.mixed, sentCounts.pct.mixed],
-                  ['sarcastic', 'Sarcastico', sentCounts.sarcastic, sentCounts.pct.sarcastic],
-                ] as Array<[SentimentLabel, string, number, number]>
-              ).map(([k, label, count, pct]) => (
-                <li
-                  key={k}
-                  className="flex items-center justify-between border-b border-border pb-2 last:border-b-0 last:pb-0"
-                >
-                  <span className="flex items-center gap-2 text-sm text-ink">
-                    <span
-                      className="inline-block w-2.5 h-2.5 rounded-sm shrink-0"
-                      style={{ backgroundColor: SENTIMENT_COLORS[k] }}
-                      aria-hidden="true"
-                    />
-                    {label}
-                  </span>
-                  <span className="font-mono text-xs text-ink-muted tabular-nums">
-                    <span className="text-ink">{count.toLocaleString('es-MX')}</span>{' '}
-                    ({pct.toFixed(1)}%)
-                  </span>
-                </li>
-              ))}
-              <li className="flex items-center justify-between pt-1 text-xs text-ink-subtle italic">
-                <span>Sin procesar</span>
-                <span className="font-mono tabular-nums">
-                  {sentCounts.unprocessed.toLocaleString('es-MX')}
-                </span>
-              </li>
-            </ul>
-          )}
-        </Card>
+        <GlobalSentimentBar
+          counts={globalCounts}
+          loading={sentQ.isLoading}
+          error={sentQ.isError}
+          onRetry={() => sentQ.refetch()}
+          title="Sentimiento global"
+          hint={`${windowLabel} · ${SCOPE_LABEL[scope]}`}
+        />
       </div>
 
-      {/* Section 2: Distribucion por plataforma (YELLOW FE-computed) */}
-      <Card>
-        <div className="flex items-center gap-2 mb-1">
+      {/* Distribucion global 5-cat (donut, breakdown real) */}
+      <section>
+        <div className="mb-2 flex items-center gap-2 px-1">
           <Hash size={16} className="text-ink-muted" aria-hidden="true" />
           <h2 className="text-sm font-semibold text-ink">
-            Distribucion por plataforma
+            Distribucion global ({windowLabel} · {SCOPE_LABEL[scope]})
           </h2>
         </div>
-        <p className="text-xs text-ink-muted italic mb-3">
-          Computado FE-side desde las ultimas 500 menciones (filtrando
-          google_trends). No representativo de todo el historial — el backend no
-          expone un endpoint sentiment-by-platform agregado.
-        </p>
-        {mentionsQ.isLoading ? (
-          <SkeletonChart />
-        ) : mentionsQ.isError ? (
-          <ErrorState onRetry={() => mentionsQ.refetch()} />
-        ) : (
-          <PlatformStackedBars rows={platformRows} />
-        )}
-      </Card>
-
-      {/* Section 3: Evolucion 60d sentiment global (YELLOW caveat B-15) */}
-      <Card>
-        <div className="flex items-center gap-2 mb-1">
-          <TrendingUp size={16} className="text-ink-muted" aria-hidden="true" />
-          <h2 className="text-sm font-semibold text-ink">
-            Evolucion 60d sentimiento global
-          </h2>
-        </div>
-        <p className="text-xs text-ink-muted italic mb-3">
-          Buckets diarios desde timeseries (sentiment_breakdown por bucket).
-          Wave B fix B-15 pendiente — ~95% de buckets pueden estar vacios
-          pre-fix.
-        </p>
-        {timeseriesQ.isLoading ? (
-          <SkeletonChart />
-        ) : timeseriesQ.isError ? (
-          <ErrorState onRetry={() => timeseriesQ.refetch()} />
-        ) : !hasTimeseriesSignal ? (
-          <EmptyState
-            title="Sin senal en buckets"
-            description="Los buckets de timeseries no tienen sentiment_breakdown poblado. Pendiente Wave B fix B-15."
-          />
-        ) : (
-          <TimeSeriesChart
-            data={timeseriesData}
-            series={[
-              {
-                key: 'positivo',
-                label: 'Positivo',
-                color: SENTIMENT_COLORS.positive,
-              },
-              {
-                key: 'negativo',
-                label: 'Negativo',
-                color: SENTIMENT_COLORS.negative,
-              },
-              {
-                key: 'neutral',
-                label: 'Neutral',
-                color: SENTIMENT_COLORS.neutral,
-              },
-              {
-                key: 'mixto',
-                label: 'Mixto',
-                color: SENTIMENT_COLORS.mixed,
-              },
-            ]}
-            height={260}
-            ariaLabel="Evolucion del sentimiento global en 60 dias por categoria"
-          />
-        )}
-      </Card>
-
-      {/* Section 4: Drivers (RED — Wave B-7 + B-15) */}
-      <Card>
-        <div className="flex items-center gap-2 mb-3">
-          <Hash size={16} className="text-ink-muted" aria-hidden="true" />
-          <h2 className="text-sm font-semibold text-ink">
-            Drivers de sentimiento (topics que pesan negativo)
-          </h2>
-        </div>
-        <EmptyState
-          title="Pendiente Wave B"
-          description="Sentiment-by-topic target-aware requiere Wave B-7 (clasificacion enfocada al cliente) + Wave B-15 (fix orchestrator window). Topics agregador sigue vacio en backend actual."
+        <SentimentDonut
+          counts={globalCounts}
+          loading={sentQ.isLoading}
+          error={sentQ.isError}
+          onRetry={() => sentQ.refetch()}
+          size={200}
+          centerLabel="menciones"
+          ariaLabel="Distribucion porcentual de sentimiento en 5 categorias"
         />
-      </Card>
+        {breakdown && breakdown.unprocessed > 0 ? (
+          <p className="mt-2 px-1 text-[11px] italic text-ink-subtle">
+            {breakdown.unprocessed.toLocaleString('en-US')} menciones sin
+            sentimiento procesado en esta ventana (excluidas del grafico).
+          </p>
+        ) : null}
+      </section>
 
-      {/* Section 5+6: Top 5 menciones positivas + negativas */}
+      {/* Fila 2: evolucion (timeseries) + drivers (sin endpoint) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card>
-          <div className="flex items-center gap-2 mb-1">
-            <ThumbsUp size={16} className="text-sentiment-positive" aria-hidden="true" />
+        <section>
+          <div className="mb-2 flex items-center gap-2 px-1">
+            <TrendingUp size={16} className="text-ink-muted" aria-hidden="true" />
             <h2 className="text-sm font-semibold text-ink">
-              Top 5 menciones positivas
+              Evolucion del sentimiento
+            </h2>
+            <span className="ml-auto text-[11px] text-ink-subtle">
+              60 dias · % por categoria
+            </span>
+          </div>
+          {timeseriesQ.isLoading || timeseriesQ.isError || hasEvolutionSignal ? (
+            <SentimentEvolution
+              data={evolutionData}
+              isLoading={timeseriesQ.isLoading}
+              isError={timeseriesQ.isError}
+              onRetry={() => timeseriesQ.refetch()}
+              height={280}
+              format="percent"
+              ariaLabel="Evolucion del sentimiento en 60 dias por categoria"
+            />
+          ) : (
+            <Card>
+              <EmptyState
+                title="Sin senal en los buckets"
+                description="Los buckets de timeseries no tienen sentiment_breakdown poblado para este periodo. Pendiente Wave B fix B-15."
+              />
+            </Card>
+          )}
+          <p className="mt-2 px-1 text-[11px] italic text-ink-subtle">
+            Buckets diarios desde /timeseries (sentiment_breakdown por bucket).
+            La serie sarcastico aun no se expone por bucket en el backend.
+          </p>
+        </section>
+
+        <section>
+          <div className="mb-2 flex items-center gap-2 px-1">
+            <Hash size={16} className="text-ink-muted" aria-hidden="true" />
+            <h2 className="text-sm font-semibold text-ink">
+              Drivers de sentimiento
             </h2>
           </div>
-          <p className="text-xs text-ink-muted italic mb-3">
-            Filtrado sentiment_label='positive' sobre 500 menciones recientes,
-            ordenado por engagement total.
+          <Card>
+            {/* API PENDIENTE: no existe endpoint de sentiment-by-topic target-aware.
+                Requiere Wave B-7 (clasificacion enfocada al cliente) + B-15 (fix
+                orchestrator window). El agregador de topics sigue vacio en el
+                backend actual, por eso NO se monta data fake: empty-state honesto. */}
+            <EmptyState
+              icon={<TrendingUp size={48} strokeWidth={1.5} />}
+              title="Drivers pendientes (Wave B)"
+              description="Los topics que mas pesan en el sentimiento requieren clasificacion target-aware (Wave B-7) y el fix de ventana del orquestador (B-15). El backend aun no expone este agregado."
+            />
+          </Card>
+        </section>
+      </div>
+
+      {/* Fila 3: top menciones positivas + negativas (FE-computed) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card>
+          <div className="mb-1 flex items-center gap-2">
+            <ThumbsUp
+              size={16}
+              className="text-sentiment-positive"
+              aria-hidden="true"
+            />
+            <h2 className="text-sm font-semibold text-ink">
+              Top menciones positivas
+            </h2>
+            <DemoBadge className="ml-auto" />
+          </div>
+          <p className="mb-3 text-[11px] italic text-ink-subtle">
+            sentiment_label='positive' sobre 500 menciones recientes, ordenado
+            por engagement total.
           </p>
           {mentionsQ.isLoading ? (
-            <SkeletonTable rows={5} />
+            <SkeletonTable rows={4} cols={1} />
           ) : mentionsQ.isError ? (
             <ErrorState onRetry={() => mentionsQ.refetch()} />
           ) : topPositive.length === 0 ? (
             <EmptyState
-              icon={<Heart size={48} strokeWidth={1.5} />}
+              icon={<ThumbsUp size={48} strokeWidth={1.5} />}
               title="Sin menciones positivas"
-              description="Las 500 menciones recientes (filtrando google_trends) no incluyen ninguna marcada como 'positive'."
+              description="Las 500 menciones recientes (filtrando google_trends) no incluyen ninguna marcada como positive."
             />
           ) : (
-            <ul className="space-y-3">
+            <ul className="space-y-2.5">
               {topPositive.map(({ mention, engagement }) => (
                 <MentionCard
                   key={mention.id}
                   m={mention}
                   engagement={engagement}
+                  tone="positive"
                 />
               ))}
-              <li className="pt-2 flex justify-end">
-                <Badge variant="positive">
-                  {topPositive.length} mostradas
-                </Badge>
+              <li className="flex justify-end pt-1">
+                <Badge variant="positive">{topPositive.length} mostradas</Badge>
               </li>
             </ul>
           )}
         </Card>
 
         <Card>
-          <div className="flex items-center gap-2 mb-1">
-            <ThumbsDown size={16} className="text-sentiment-negative" aria-hidden="true" />
+          <div className="mb-1 flex items-center gap-2">
+            <ThumbsDown
+              size={16}
+              className="text-sentiment-negative"
+              aria-hidden="true"
+            />
             <h2 className="text-sm font-semibold text-ink">
-              Top 5 menciones negativas
+              Top menciones negativas
             </h2>
+            <DemoBadge className="ml-auto" />
           </div>
-          <p className="text-xs text-ink-muted italic mb-3">
-            Filtrado sentiment_label='negative' sobre 500 menciones recientes,
-            ordenado por engagement total.
+          <p className="mb-3 text-[11px] italic text-ink-subtle">
+            sentiment_label='negative' sobre 500 menciones recientes, ordenado
+            por engagement total.
           </p>
           {mentionsQ.isLoading ? (
-            <SkeletonTable rows={5} />
+            <SkeletonTable rows={4} cols={1} />
           ) : mentionsQ.isError ? (
             <ErrorState onRetry={() => mentionsQ.refetch()} />
           ) : topNegative.length === 0 ? (
             <EmptyState
               icon={<MessageSquare size={48} strokeWidth={1.5} />}
               title="Sin menciones negativas"
-              description="Las 500 menciones recientes (filtrando google_trends) no incluyen ninguna marcada como 'negative'."
+              description="Las 500 menciones recientes (filtrando google_trends) no incluyen ninguna marcada como negative."
             />
           ) : (
-            <ul className="space-y-3">
+            <ul className="space-y-2.5">
               {topNegative.map(({ mention, engagement }) => (
                 <MentionCard
                   key={mention.id}
                   m={mention}
                   engagement={engagement}
+                  tone="negative"
                 />
               ))}
-              <li className="pt-2 flex justify-end">
-                <Badge variant="negative">
-                  {topNegative.length} mostradas
-                </Badge>
+              <li className="flex justify-end pt-1">
+                <Badge variant="negative">{topNegative.length} mostradas</Badge>
               </li>
             </ul>
           )}

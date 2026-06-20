@@ -1,39 +1,46 @@
-import { Link } from 'react-router-dom'
-import {
-  AlertTriangle,
-  Bell,
-  Clock,
-  Hash,
-  MessageSquare,
-} from 'lucide-react'
-import { PageHeader } from '../../components/layout/PageHeader'
-import { Card } from '../../components/ui/Card'
-import { Badge } from '../../components/ui/Badge'
-import { KPICard } from '../../components/data-display/KPICard'
-import { TimeSeriesChart } from '../../components/data-display/TimeSeriesChart'
-import { DonutChart } from '../../components/data-display/DonutChart'
-import { EmptyState } from '../../components/states/EmptyState'
-import { ErrorState } from '../../components/states/ErrorState'
-import {
-  SkeletonChart,
-  SkeletonTable,
-} from '../../components/states/LoadingSkeleton'
+/**
+ * Vista General (mockup 04-vista-general.html) — PANTALLA #1 (demo).
+ *
+ * Layout v3:
+ *   page-head (eyebrow + nombre + sub + FreshnessBadge)
+ *   AlertBanner (variant inline, peor alerta activa) — solo si hay alertas
+ *   KPI grid x5 (volumen, sentimiento neto, alcance, criticos, freshness) c/sparkline
+ *   grid-2: VolumeSentimentChart (60d) | SentimentDonut (30d)
+ *   grid-2b: CriticsTable top-5 (30d) | ViralMentions (por engagement)
+ *
+ * 4 estados por panel (loading / empty / error / data) los resuelven los
+ * componentes auto-estado; los KPI derivados resuelven loading/empty inline.
+ * Responsive mobile-first. Respeta prefers-reduced-motion (la animacion vive en
+ * los componentes importados; aqui no se anaden animaciones nuevas).
+ *
+ * El politician id activo viene del contexto de cliente (theme store /
+ * ClientSelector). NO se hardcodea.
+ *
+ * REGLA 79: cero acentos ni n-con-tilde en strings visibles.
+ */
+
+import { useNavigate } from 'react-router-dom'
 import { useClientTheme } from '../../features/client-theme/useClientTheme'
 import {
-  useAlerts,
   useFreshness,
-  useMentions,
   usePPI,
   useSentimentBreakdown,
   useTimeseries,
   useTopAuthors,
-  useTopics,
 } from '../../lib/api/queries'
-import type { Alert, Freshness, TimeseriesBucket } from '../../lib/api/types'
-import { cn } from '../../lib/utils/cn'
+import type { TimeseriesBucket } from '../../lib/api/types'
+import { KPICard } from '../../components/data-display/KPICard'
+import { FreshnessBadge } from '../../components/data-display/FreshnessBadge'
+import { AlertBanner } from '../../components/data-display/AlertBanner'
+import { ViralMentions } from '../../components/data-display/ViralMentions'
+import { CriticsTable, isSyntheticAuthor } from '../../components/data-display/CriticsTable'
+import { VolumeSentimentChart } from '../../components/charts/VolumeSentimentChart'
+import { SentimentDonut } from '../../components/charts/SentimentDonut'
+import type { SentimentCounts } from '../../components/charts/sentimentColors'
+import { Card } from '../../components/ui/Card'
 
 // ---------------------------------------------------------------------------
-// Helpers — safe extraction from the loose PPI shape (Record<string, unknown>)
+// Helpers — extraccion segura desde la forma laxa de PPI (Record<unknown>).
 // ---------------------------------------------------------------------------
 
 function numOrNull(v: unknown): number | null {
@@ -46,122 +53,26 @@ function asRecord(v: unknown): Record<string, unknown> | null {
     : null
 }
 
-function extractPPIScore(ppi: unknown): number | null {
-  const obj = asRecord(ppi)
-  if (!obj) return numOrNull(ppi)
-  return numOrNull(obj.ppi_score) ?? numOrNull(obj.score)
-}
-
-function extractPPIComponent(ppi: unknown, key: string): number | null {
+function ppiComponent(ppi: unknown, key: string): number | null {
   const obj = asRecord(ppi)
   const components = asRecord(obj?.components)
-  return numOrNull(components?.[key])
-}
-
-function extractSov(sov: unknown): number | null {
-  if (typeof sov === 'number') return sov
-  const obj = asRecord(sov)
-  return numOrNull(obj?.sov_24h) ?? numOrNull(obj?.value)
+  // El backend puede exponer el valor en components{} o directo en el dict raiz.
+  return numOrNull(components?.[key]) ?? numOrNull(obj?.[key])
 }
 
 // ---------------------------------------------------------------------------
-// FreshnessBadge
+// Formato compacto para KPIs grandes (alcance / engagement). en-US grouping
+// para evitar separadores con acentos (Regla 79).
 // ---------------------------------------------------------------------------
 
-function FreshnessBadge({ data }: { data: Freshness | undefined }) {
-  if (!data) {
-    return (
-      <Badge variant="neutral" className="gap-1.5">
-        <Clock size={12} aria-hidden="true" />
-        <span>Cargando freshness</span>
-      </Badge>
-    )
+function compact(n: number): string {
+  if (Math.abs(n) >= 1000) {
+    return new Intl.NumberFormat('en-US', {
+      notation: 'compact',
+      maximumFractionDigits: 1,
+    }).format(n)
   }
-  const hours = data.hours_since_collection
-  const status = data.status
-  const variant =
-    status === 'fresh' ? 'positive' : status === 'stale' ? 'mixed' : 'negative'
-  const label =
-    hours === null || hours === undefined
-      ? `Sin colecta · ${status}`
-      : hours < 1
-        ? `Actualizado hace <1h · ${status}`
-        : `Actualizado hace ${Math.round(hours)}h · ${status}`
-  return (
-    <Badge variant={variant} className="gap-1.5">
-      <Clock size={12} aria-hidden="true" />
-      <span>{label}</span>
-    </Badge>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// AlertsBanner — top of page; only renders when alerts > 0
-// ---------------------------------------------------------------------------
-
-function severityRank(s: Alert['severity']): number {
-  switch (s) {
-    case 'critical':
-      return 4
-    case 'warning':
-      return 3
-    case 'watch':
-      return 2
-    case 'info':
-      return 1
-    default:
-      return 0
-  }
-}
-
-function severityClass(s: Alert['severity']): string {
-  switch (s) {
-    case 'critical':
-    case 'warning':
-      return 'border-sentiment-negative/50 bg-sentiment-negative/10 text-sentiment-negative'
-    case 'watch':
-      return 'border-sentiment-mixed/50 bg-sentiment-mixed/10 text-sentiment-mixed'
-    case 'info':
-    default:
-      return 'border-border bg-surface-elevated text-ink'
-  }
-}
-
-function AlertsBanner({ alerts }: { alerts: Alert[] }) {
-  const active = alerts.filter((a) => !a.is_resolved)
-  if (active.length === 0) return null
-  const sorted = [...active].sort(
-    (a, b) => severityRank(b.severity) - severityRank(a.severity),
-  )
-  const top = sorted[0]!
-  return (
-    <div
-      role="alert"
-      className={cn(
-        'flex items-start gap-3 rounded-lg border p-3',
-        severityClass(top.severity),
-      )}
-    >
-      <Bell size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wide">
-          <span>{active.length} alerta{active.length === 1 ? '' : 's'} activa{active.length === 1 ? '' : 's'}</span>
-          <span aria-hidden="true">·</span>
-          <span>{top.severity}</span>
-        </div>
-        <div className="mt-0.5 font-medium text-ink truncate">{top.title}</div>
-        {top.description ? (
-          <div className="text-sm text-ink-muted line-clamp-2">{top.description}</div>
-        ) : null}
-      </div>
-      <Link
-        to="/dashboard/alertas"
-        className="shrink-0 self-center text-xs font-mono underline underline-offset-2 hover:no-underline"
-      >
-        Ver todas
-      </Link>
-    </div>
-  )
+  return new Intl.NumberFormat('en-US').format(Math.round(n))
 }
 
 // ---------------------------------------------------------------------------
@@ -169,10 +80,11 @@ function AlertsBanner({ alerts }: { alerts: Alert[] }) {
 // ---------------------------------------------------------------------------
 
 export function VistaGeneral() {
+  const navigate = useNavigate()
   const { client } = useClientTheme()
   const politicianId = client.politician_id
-  const displayName = client.display_name
 
+  // --- Queries (hooks documentados) ---
   const ppiQ = usePPI(politicianId)
   const sentQ = useSentimentBreakdown(politicianId, { scope: 'all', days: 30 })
   const topAuthorsQ = useTopAuthors(politicianId, {
@@ -180,324 +92,237 @@ export function VistaGeneral() {
     days: 30,
     scope: 'third_party',
   })
-  const alertsQ = useAlerts(politicianId)
   const freshnessQ = useFreshness(politicianId)
   const timeseriesQ = useTimeseries(politicianId, { days: 60, interval: 'day' })
-  const topicsQ = useTopics(politicianId, { days: 30 })
-  const mentionsQ = useMentions(politicianId, { limit: 50 })
 
-  const ppiData = ppiQ.data
-  const ppiScore = extractPPIScore(ppiData?.ppi)
-  const sov24h = extractSov(ppiData?.sov_24h)
-  const avgSentiment = extractPPIComponent(ppiData?.ppi, 'avg_sentiment')
-  const totalEngagement = extractPPIComponent(ppiData?.ppi, 'total_engagement')
-
+  // --- Timeseries: volumen + sentimiento por dia (60d) ---
   const buckets: TimeseriesBucket[] = timeseriesQ.data?.buckets ?? []
-  const mentionsSum60d = buckets.reduce(
+
+  const chartData = buckets.map((b) => ({
+    label: b.label ?? b.timestamp,
+    volume: typeof b.count === 'number' ? b.count : 0,
+    sentiment: typeof b.avg_sentiment === 'number' ? b.avg_sentiment : null,
+  }))
+
+  const volumeSpark = buckets.map((b) =>
+    typeof b.count === 'number' ? b.count : 0,
+  )
+  const sentimentSpark = buckets
+    .map((b) => b.avg_sentiment)
+    .filter((v): v is number => typeof v === 'number')
+
+  const mentions60d = buckets.reduce(
     (sum, b) => sum + (typeof b.count === 'number' ? b.count : 0),
     0,
   )
 
-  const chartData = buckets.map((b) => ({
-    date: b.label ?? b.timestamp,
-    menciones: typeof b.count === 'number' ? b.count : 0,
-    sentimiento:
-      typeof b.avg_sentiment === 'number' ? b.avg_sentiment : 0,
-  }))
+  // Sentimiento neto agregado de la ventana (-1..1): promedio simple de los
+  // buckets con dato (honesto: si no hay buckets con sentimiento -> empty).
+  const netSentiment =
+    sentimentSpark.length > 0
+      ? sentimentSpark.reduce((s, v) => s + v, 0) / sentimentSpark.length
+      : null
 
-  const sentPct = sentQ.data?.breakdown?.pct
-  const sentTotal = sentQ.data?.breakdown?.total ?? 0
-  const donutData = sentPct
-    ? [
-        {
-          name: 'Positivo',
-          value: sentPct.positive,
-          color: 'var(--polaris-sentiment-positive)',
-        },
-        {
-          name: 'Negativo',
-          value: sentPct.negative,
-          color: 'var(--polaris-sentiment-negative)',
-        },
-        {
-          name: 'Neutral',
-          value: sentPct.neutral,
-          color: 'var(--polaris-sentiment-neutral)',
-        },
-        {
-          name: 'Mixto',
-          value: sentPct.mixed,
-          color: 'var(--polaris-sentiment-mixed)',
-        },
-        {
-          name: 'Sarcastico',
-          value: sentPct.sarcastic,
-          color: 'var(--polaris-accent)',
-        },
-      ]
-    : []
+  // --- Sentiment breakdown (30d) para el donut + total ---
+  const breakdown = sentQ.data?.breakdown
+  const donutCounts: SentimentCounts | null = breakdown
+    ? {
+        positive: breakdown.positive,
+        negative: breakdown.negative,
+        neutral: breakdown.neutral,
+        mixed: breakdown.mixed,
+        sarcastic: breakdown.sarcastic,
+      }
+    : null
+  const donutTotal = breakdown?.total ?? 0
 
-  const alerts = alertsQ.data ?? []
-  const activeAlerts = alerts.filter((a) => !a.is_resolved)
+  // --- PPI: alcance / engagement total de la ventana ---
+  const totalEngagement = ppiComponent(ppiQ.data?.ppi, 'total_engagement')
+  const totalReach =
+    ppiComponent(ppiQ.data?.ppi, 'total_reach') ?? totalEngagement
+
+  // --- Criticos: cuenta de voces reales (excluye ruido sintetico) ---
+  const realAuthors = (topAuthorsQ.data?.authors ?? []).filter(
+    (a) => !isSyntheticAuthor(a),
+  )
+  const criticsCount = realAuthors.length
+  const topCriticPct =
+    realAuthors.length > 0
+      ? Math.round(
+          (realAuthors[0]!.pct_negative <= 1
+            ? realAuthors[0]!.pct_negative * 100
+            : realAuthors[0]!.pct_negative),
+        )
+      : null
+
+  // --- Freshness: horas desde colecta para el KPI numerico ---
+  const freshHours = freshnessQ.data?.hours_since_collection
+  const freshValue =
+    freshHours === null || freshHours === undefined
+      ? '--'
+      : freshHours < 1
+        ? '<1'
+        : String(Math.round(freshHours))
 
   return (
-    <div className="p-4 sm:p-6 space-y-6">
-      <PageHeader
-        title={`Vista General — ${displayName}`}
-        subtitle="KPIs principales + tendencias 60d + senales activas"
-        actions={<FreshnessBadge data={freshnessQ.data} />}
+    <div className="space-y-4 p-4 sm:p-6">
+      {/* ===================== PAGE HEAD ===================== */}
+      <header className="mb-2 flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-subtle">
+            Vista general
+          </p>
+          <h1 className="mt-1 truncate text-2xl font-extrabold tracking-tight text-ink">
+            {client.display_name}
+          </h1>
+          <p className="mt-1 text-sm text-ink-muted">
+            KPIs principales, tendencias a 60 dias y senales activas
+            <span aria-hidden="true"> &middot; </span>
+            <span className="font-semibold text-ink-muted">{client.party}</span>
+          </p>
+        </div>
+        <FreshnessBadge politicianId={politicianId} />
+      </header>
+
+      {/* ===================== ALERTAS (banner inline) ===================== */}
+      <AlertBanner
+        politicianId={politicianId}
+        variant="inline"
+        hideWhenEmpty
+        onView={() => navigate('/dashboard/alertas')}
       />
 
-      {activeAlerts.length > 0 ? <AlertsBanner alerts={alerts} /> : null}
-
-      {/* 5 KPI grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* ===================== KPI GRID x5 ===================== */}
+      <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-5">
         <KPICard
-          label="PPI Score"
-          value={ppiScore !== null ? ppiScore.toFixed(2) : '—'}
-          loading={ppiQ.isLoading}
-        />
-        <KPICard
-          label="Share of Voice 24h"
-          value={sov24h !== null ? sov24h : '—'}
-          format="percent"
-          loading={ppiQ.isLoading}
-        />
-        <KPICard
-          label="Sentimiento avg"
-          value={avgSentiment !== null ? avgSentiment.toFixed(3) : '—'}
-          loading={ppiQ.isLoading}
-        />
-        <KPICard
-          label="Engagement total"
-          value={totalEngagement !== null ? totalEngagement : '—'}
+          label="Volumen 60d"
+          value={timeseriesQ.data ? mentions60d : ''}
           format="number"
-          loading={ppiQ.isLoading}
-        />
-        <KPICard
-          label="Menciones 60d"
-          value={timeseriesQ.data ? mentionsSum60d : '—'}
-          format="number"
+          sparkline={volumeSpark}
           loading={timeseriesQ.isLoading}
+          error={timeseriesQ.isError}
+          onRetry={() => timeseriesQ.refetch()}
+          note="menciones / 60 dias"
+        />
+
+        <KPICard
+          label="Sentimiento neto"
+          value={
+            netSentiment === null
+              ? ''
+              : `${netSentiment >= 0 ? '+' : ''}${netSentiment.toFixed(2)}`
+          }
+          sparkline={sentimentSpark}
+          loading={timeseriesQ.isLoading}
+          error={timeseriesQ.isError}
+          onRetry={() => timeseriesQ.refetch()}
+          note="promedio -1 a 1"
+        />
+
+        <KPICard
+          label="Alcance"
+          value={totalReach === null ? '' : compact(totalReach)}
+          sparkline={volumeSpark}
+          loading={ppiQ.isLoading}
+          error={ppiQ.isError}
+          onRetry={() => ppiQ.refetch()}
+          note="engagement acumulado"
+        />
+
+        <KPICard
+          label="Voces criticas"
+          value={topAuthorsQ.data ? criticsCount : ''}
+          format="number"
+          loading={topAuthorsQ.isLoading}
+          error={topAuthorsQ.isError}
+          onRetry={() => topAuthorsQ.refetch()}
+          note={
+            topCriticPct !== null
+              ? `top voz ${topCriticPct}% negativo`
+              : 'autores con menciones negativas'
+          }
+        />
+
+        <KPICard
+          label="Frescura"
+          value={freshnessQ.data ? freshValue : ''}
+          unit={
+            freshValue === '--' || freshValue === '<1' ? undefined : 'h'
+          }
+          loading={freshnessQ.isLoading}
+          error={freshnessQ.isError}
+          onRetry={() => freshnessQ.refetch()}
+          note={
+            freshnessQ.data ? `estado: ${freshnessQ.data.status}` : 'desde colecta'
+          }
         />
       </div>
 
-      {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card>
-          <h3 className="text-sm font-semibold mb-2 text-ink">
-            Volumen + sentimiento 60d
-          </h3>
-          {timeseriesQ.isLoading ? (
-            <SkeletonChart />
-          ) : timeseriesQ.isError ? (
-            <ErrorState onRetry={() => timeseriesQ.refetch()} />
-          ) : chartData.length === 0 ? (
-            <EmptyState
-              title="Sin buckets de timeseries"
-              description="El endpoint no devolvio data para la ventana 60d."
-            />
-          ) : (
-            <>
-              <TimeSeriesChart
-                data={chartData}
-                series={[
-                  {
-                    key: 'menciones',
-                    label: 'Menciones',
-                    color: 'var(--polaris-primary)',
-                  },
-                  {
-                    key: 'sentimiento',
-                    label: 'Sentimiento avg',
-                    color: 'var(--polaris-accent)',
-                  },
-                ]}
-                height={240}
-                ariaLabel="Volumen de menciones y sentimiento promedio en 60 dias"
-              />
-              <p className="text-xs text-ink-muted mt-2 italic">
-                Buckets historicos limitados hasta Wave B fix B-15 (orchestrator window).
-                Mayoria de buckets pueden ser zero pre-fix.
-              </p>
-            </>
-          )}
-        </Card>
-
-        <Card>
-          <h3 className="text-sm font-semibold mb-2 text-ink">
-            Distribucion sentimiento (30d)
-          </h3>
-          {sentQ.isLoading ? (
-            <SkeletonChart />
-          ) : sentQ.isError ? (
-            <ErrorState onRetry={() => sentQ.refetch()} />
-          ) : sentTotal === 0 || donutData.length === 0 ? (
-            <EmptyState
-              title="Sin sentimiento procesado"
-              description="No hay menciones con label de sentimiento en la ventana."
-            />
-          ) : (
-            <DonutChart
-              data={donutData}
-              height={240}
-              centerLabel="Menciones"
-              centerValue={sentTotal.toLocaleString('es-MX')}
-              ariaLabel="Distribucion porcentual de sentimiento en 5 categorias"
-            />
-          )}
-        </Card>
-      </div>
-
-      {/* Secondary row: top critics + top viral mentions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card>
-          <h3 className="text-sm font-semibold mb-3 text-ink">
-            Top 5 voces criticas (30d)
-          </h3>
-          {topAuthorsQ.isLoading ? (
-            <SkeletonTable rows={5} />
-          ) : topAuthorsQ.isError ? (
-            <ErrorState onRetry={() => topAuthorsQ.refetch()} />
-          ) : (
-            (() => {
-              const filtered = (topAuthorsQ.data?.authors ?? []).filter(
-                (a) =>
-                  a.author !== 'MX' &&
-                  !(a.platforms ?? []).includes('google_trends'),
-              )
-              if (filtered.length === 0) {
-                return (
-                  <EmptyState
-                    title="Sin criticos validos"
-                    description="Tras filtrar synthetic noise (google_trends + author 'MX'), no quedan candidatos."
-                  />
-                )
-              }
-              return (
-                <ul className="space-y-2">
-                  {filtered.slice(0, 5).map((a, i) => (
-                    <li
-                      key={`${a.author}-${i}`}
-                      className="flex items-start justify-between gap-3 border-b border-border pb-2 last:border-b-0 last:pb-0"
-                    >
-                      <div className="min-w-0">
-                        <div className="font-medium text-ink truncate">
-                          {a.author}
-                        </div>
-                        <div className="text-xs text-ink-muted truncate">
-                          {(a.platforms ?? []).join(', ') || '(sin plataforma)'}
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <div className="font-mono text-sm text-ink tabular-nums">
-                          {a.count} menc.
-                        </div>
-                        <div className="text-xs text-sentiment-negative tabular-nums">
-                          {(a.pct_negative * 100).toFixed(0)}% neg
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )
-            })()
-          )}
-        </Card>
-
-        <Card>
-          <h3 className="text-sm font-semibold mb-3 text-ink">
-            Top 3 menciones virales
-          </h3>
-          {mentionsQ.isLoading ? (
-            <SkeletonTable rows={3} />
-          ) : mentionsQ.isError ? (
-            <ErrorState onRetry={() => mentionsQ.refetch()} />
-          ) : (
-            (() => {
-              const items = (mentionsQ.data ?? [])
-                .filter((m) => m.platform !== 'google_trends')
-                .map((m) => {
-                  const sum = Object.values(m.engagement_metrics ?? {}).reduce<number>(
-                    (s, v) => s + (typeof v === 'number' ? v : 0),
-                    0,
-                  )
-                  return { mention: m, engagementSum: sum }
-                })
-                .filter((row) => row.engagementSum > 0)
-                .sort((a, b) => b.engagementSum - a.engagementSum)
-                .slice(0, 3)
-
-              if (items.length === 0) {
-                return (
-                  <EmptyState
-                    icon={<MessageSquare size={48} strokeWidth={1.5} />}
-                    title="Sin menciones con engagement"
-                    description="Tras filtrar synthetic noise (google_trends) + engagement=0, no quedan candidatos en la pagina actual."
-                  />
-                )
-              }
-              return (
-                <ul className="space-y-3">
-                  {items.map(({ mention: m, engagementSum }) => (
-                    <li
-                      key={m.id}
-                      className="border-b border-border pb-2 last:border-b-0 last:pb-0"
-                    >
-                      <div className="text-xs text-ink-muted font-mono">
-                        {m.platform} · {m.author ?? '(anon)'} · engagement{' '}
-                        <span className="tabular-nums">{engagementSum}</span>
-                      </div>
-                      <div className="text-sm text-ink line-clamp-2 mt-0.5">
-                        {(m.content ?? '').slice(0, 200) || '(sin contenido)'}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )
-            })()
-          )}
-        </Card>
-      </div>
-
-      {/* Topics RED — empty state honest */}
-      <Card>
-        <h3 className="text-sm font-semibold mb-3 text-ink">Topics agregados</h3>
-        {topicsQ.isLoading ? (
-          <SkeletonTable rows={3} />
-        ) : topicsQ.isError ? (
-          <ErrorState onRetry={() => topicsQ.refetch()} />
-        ) : (topicsQ.data?.topics ?? []).length === 0 ? (
-          <EmptyState
-            icon={<Hash size={48} strokeWidth={1.5} />}
-            title="Sin topics agregados aun"
-            description="Endpoint /topics devuelve vacio pese a ~21% de menciones con clasificacion en DB. Pendiente Wave B fix aggregator."
+      {/* ===================== CHARTS ROW ===================== */}
+      <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-[1.55fr_1fr]">
+        <div className="min-w-0">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h3 className="text-base font-semibold tracking-tight text-ink">
+              Volumen y sentimiento
+              <span className="ml-1.5 font-normal text-ink-subtle">60 dias</span>
+            </h3>
+            <span className="font-mono text-[11px] text-ink-subtle">
+              menciones / dia
+            </span>
+          </div>
+          <VolumeSentimentChart
+            data={chartData}
+            isLoading={timeseriesQ.isLoading}
+            isError={timeseriesQ.isError}
+            onRetry={() => timeseriesQ.refetch()}
+            height={300}
+            volumeLabel="Volumen"
+            sentimentLabel="Sentimiento neto"
+            ariaLabel="Volumen de menciones y sentimiento neto en 60 dias"
           />
-        ) : (
-          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {topicsQ.data!.topics.slice(0, 8).map((t) => (
-              <li
-                key={t.topic}
-                className="flex items-center justify-between border border-border rounded-md px-3 py-2"
-              >
-                <span className="text-sm text-ink truncate">{t.topic}</span>
-                <span className="font-mono text-xs text-ink-muted tabular-nums">
-                  {t.count}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+        </div>
 
-      {/* Footer disclaimer */}
-      <div className="flex items-start gap-2 text-xs text-ink-subtle italic">
-        <AlertTriangle size={14} className="shrink-0 mt-0.5" aria-hidden="true" />
-        <span>
-          Pre-Wave-B: buckets historicos truncados (B-15), momentum EMA=0, topics
-          aggregator vacio. KPIs PPI/SoV/Sentimiento/Engagement reflejan datos
-          reales del backend (verificados 2026-05-18).
-        </span>
+        <div className="min-w-0">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h3 className="text-base font-semibold tracking-tight text-ink">
+              Distribucion de sentimiento
+            </h3>
+            <span className="font-mono text-[11px] text-ink-subtle">30d</span>
+          </div>
+          <SentimentDonut
+            counts={donutCounts}
+            loading={sentQ.isLoading}
+            error={sentQ.isError}
+            onRetry={() => sentQ.refetch()}
+            size={150}
+            centerValue={donutTotal.toLocaleString('en-US')}
+            centerLabel="menciones"
+            ariaLabel="Distribucion de sentimiento en la ventana de 30 dias"
+          />
+        </div>
+      </div>
+
+      {/* ===================== LISTS ROW ===================== */}
+      <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
+        <Card className="flex flex-col">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h3 className="text-base font-semibold tracking-tight text-ink">
+              Top 5 voces criticas
+            </h3>
+            <span className="font-mono text-[11px] text-ink-subtle">
+              30d &middot; % negativo
+            </span>
+          </div>
+          <CriticsTable
+            authors={topAuthorsQ.data?.authors}
+            loading={topAuthorsQ.isLoading}
+            error={topAuthorsQ.isError}
+            onRetry={() => topAuthorsQ.refetch()}
+            limit={5}
+          />
+        </Card>
+
+        <ViralMentions politicianId={politicianId} limit={3} />
       </div>
     </div>
   )
