@@ -96,6 +96,13 @@ function SidebarLink({ item, alertCount, onNavigate }: SidebarLinkProps) {
   )
 }
 
+/** Breakpoint del drawer: por debajo el sidebar es un panel deslizante off-screen. */
+const MOBILE_QUERY = '(max-width: 1024px)'
+
+/** Selector de elementos enfocables dentro del sidebar (para foco inicial + trap). */
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
 /**
  * AppShell — shell del dashboard (T0.3). Reemplaza DashboardLayout + MobileNav.
  *
@@ -108,6 +115,11 @@ function SidebarLink({ item, alertCount, onNavigate }: SidebarLinkProps) {
  *
  * Preserva el contrato de rutas: el <Outlet/> renderiza la ruta activa de React
  * Router (el auth guard RequireAuth sigue envolviendo este shell en App.tsx).
+ *
+ * A11y del drawer mobile: cerrado off-screen el sidebar queda inert + aria-hidden
+ * (el teclado/lectores no entran a links fuera de pantalla); al abrir mueve el
+ * foco al primer item con trap basico, y Escape cierra devolviendo el foco a la
+ * hamburguesa. En desktop el sidebar es sticky y siempre interactivo.
  */
 export function AppShell() {
   const [navOpen, setNavOpen] = useState(false)
@@ -117,25 +129,106 @@ export function AppShell() {
   const userMenuRef = useRef<HTMLDivElement>(null)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
 
+  // Refs para el manejo de foco del drawer mobile (a11y P0).
+  const sidebarRef = useRef<HTMLElement>(null)
+  const toggleRef = useRef<HTMLButtonElement>(null)
+
+  // ¿Estamos en viewport mobile (drawer)? En desktop el sidebar es sticky y
+  // siempre visible, asi que NUNCA debe quedar inert / aria-hidden.
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return false
+    return window.matchMedia(MOBILE_QUERY).matches
+  })
+
   // Badge de alertas en el sidebar: conteo real por cliente activo. Si la API
   // esta dead/cargando, data === undefined -> 0 -> el badge no se muestra.
   const { data: alerts } = useAlerts(client.politician_id)
   const alertCount = alerts?.length ?? 0
+
+  // Suscripcion al breakpoint: mantiene isMobile sincronizado al resize/rotacion.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const mql = window.matchMedia(MOBILE_QUERY)
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    setIsMobile(mql.matches)
+    mql.addEventListener('change', onChange)
+    return () => mql.removeEventListener('change', onChange)
+  }, [])
 
   // Cierra el drawer al cambiar de ruta (navegacion mobile).
   useEffect(() => {
     setNavOpen(false)
   }, [location.pathname])
 
-  // Cierra el drawer con Escape.
+  // Saca el sidebar del arbol a11y / orden de tabulacion cuando esta cerrado
+  // off-screen en mobile. inert (teclado + lectores) + aria-hidden (lectores
+  // legacy). En desktop o con el drawer abierto el sidebar es interactivo.
+  const sidebarHidden = isMobile && !navOpen
   useEffect(() => {
-    if (!navOpen) return
+    const el = sidebarRef.current
+    if (!el) return
+    if (sidebarHidden) {
+      el.inert = true
+      el.setAttribute('aria-hidden', 'true')
+    } else {
+      el.inert = false
+      el.removeAttribute('aria-hidden')
+    }
+  }, [sidebarHidden])
+
+  // Al abrir el drawer en mobile: mueve el foco al primer item del sidebar.
+  // Al cerrarlo (habiendo estado abierto): devuelve el foco a la hamburguesa.
+  // No es animacion -> no requiere gating por prefers-reduced-motion; el slide
+  // visual vive en index.css y ya respeta la preferencia.
+  const wasOpenRef = useRef(false)
+  useEffect(() => {
+    if (!isMobile) {
+      wasOpenRef.current = navOpen
+      return
+    }
+    if (navOpen) {
+      const first = sidebarRef.current?.querySelector<HTMLElement>(
+        FOCUSABLE_SELECTOR,
+      )
+      first?.focus()
+    } else if (wasOpenRef.current) {
+      toggleRef.current?.focus()
+    }
+    wasOpenRef.current = navOpen
+  }, [navOpen, isMobile])
+
+  // Drawer abierto en mobile: Escape cierra + trap de foco (Tab/Shift+Tab
+  // ciclan dentro del sidebar para no escapar a contenido off-screen detras).
+  useEffect(() => {
+    if (!navOpen || !isMobile) return
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setNavOpen(false)
+      if (e.key === 'Escape') {
+        setNavOpen(false)
+        return
+      }
+      if (e.key !== 'Tab') return
+      const el = sidebarRef.current
+      if (!el) return
+      const items = Array.from(
+        el.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      )
+      if (items.length === 0) return
+      const firstItem = items[0]!
+      const lastItem = items[items.length - 1]!
+      const active = document.activeElement
+      if (e.shiftKey) {
+        if (active === firstItem || !el.contains(active)) {
+          e.preventDefault()
+          lastItem.focus()
+        }
+      } else if (active === lastItem) {
+        e.preventDefault()
+        firstItem.focus()
+      }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [navOpen])
+  }, [navOpen, isMobile])
 
   // Menu de usuario (avatar): cierra al click afuera / Escape.
   useEffect(() => {
@@ -159,7 +252,12 @@ export function AppShell() {
   return (
     <div className={cn('app-shell', navOpen && 'is-nav-open')}>
       {/* ---------- Sidebar / drawer ---------- */}
-      <aside className="app-shell__sidebar" aria-label="Navegacion principal">
+      <aside
+        ref={sidebarRef}
+        id="app-sidebar"
+        className="app-shell__sidebar"
+        aria-label="Navegacion principal"
+      >
         <div className="sb-brand">
           <RadarMark size={30} withBlip />
           <div className="nm">
@@ -191,10 +289,12 @@ export function AppShell() {
       <div className="app-shell__main">
         <header className="app-shell__topbar">
           <button
+            ref={toggleRef}
             type="button"
             className="tb-icon sb-toggle"
             aria-label={navOpen ? 'Cerrar menu' : 'Abrir menu'}
             aria-expanded={navOpen}
+            aria-controls="app-sidebar"
             onClick={() => setNavOpen((v) => !v)}
           >
             {navOpen ? (

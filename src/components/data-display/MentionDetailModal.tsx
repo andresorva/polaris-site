@@ -171,16 +171,67 @@ function buildAgents(detail: MentionDetail): AgentCell[] {
 // Modal
 // ---------------------------------------------------------------------------
 
+// CSS selector for elements that can receive keyboard focus inside the dialog.
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'textarea:not([disabled])',
+  'select:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',')
+
 export function MentionDetailModal({ mentionId, onClose }: Props) {
   const open = !!mentionId
   const query = useMentionDetail(mentionId)
   const closeRef = useRef<HTMLButtonElement>(null)
+  // The dialog panel — root for the focus-trap query.
+  const panelRef = useRef<HTMLDivElement>(null)
+  // The element that had focus before the modal opened (the trigger), so we
+  // can hand focus back to it when the modal closes.
+  const triggerRef = useRef<HTMLElement | null>(null)
 
-  // Escape to close + lock body scroll while open.
+  // Escape to close + Tab focus-trap + lock body scroll while open.
   useEffect(() => {
     if (!open) return
+    // Remember the trigger so focus returns to it on close.
+    triggerRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null
+
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') {
+        onClose()
+        return
+      }
+      if (e.key !== 'Tab') return
+      // Focus-trap: keep Tab / Shift+Tab cycling inside the dialog.
+      const panel = panelRef.current
+      if (!panel) return
+      const focusables = Array.from(
+        panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      ).filter((el) => el.offsetParent !== null || el === document.activeElement)
+      if (focusables.length === 0) {
+        // Nothing tabbable yet (e.g. loading state) — pin focus to the panel.
+        e.preventDefault()
+        panel.focus()
+        return
+      }
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      const active = document.activeElement
+      if (e.shiftKey) {
+        if (active === first || !panel.contains(active)) {
+          e.preventDefault()
+          last.focus()
+        }
+      } else {
+        if (active === last || !panel.contains(active)) {
+          e.preventDefault()
+          first.focus()
+        }
+      }
     }
     document.addEventListener('keydown', onKey)
     const prevOverflow = document.body.style.overflow
@@ -190,6 +241,9 @@ export function MentionDetailModal({ mentionId, onClose }: Props) {
     return () => {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = prevOverflow
+      // Return focus to whatever opened the modal.
+      triggerRef.current?.focus()
+      triggerRef.current = null
     }
   }, [open, onClose])
 
@@ -214,7 +268,9 @@ export function MentionDetailModal({ mentionId, onClose }: Props) {
       aria-label="Detalle de mencion"
     >
       <div
-        className="w-full max-w-[720px] max-h-[86vh] overflow-auto rounded-lg bg-card border border-border-strong shadow-soft"
+        ref={panelRef}
+        tabIndex={-1}
+        className="w-full max-w-[720px] max-h-[86vh] overflow-auto rounded-lg bg-card border border-border-strong shadow-soft outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

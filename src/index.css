@@ -114,6 +114,16 @@
   --text-tertiary: #8893A4;
   --text-on-primary: #FFFFFF;
 
+  /* Version del primary OSCURECIDA para usar como COLOR DE TEXTO/icono sobre
+     superficies claras (sidebar --bg-base-2 #E9EEF5). El primary "puro" falla
+     AA 4.5:1 como texto chico en light para MC/PRD; este token mezcla 45% negro
+     y garantiza >=4.5:1 en las 8 paletas (peor caso PRD 5.06). Solo para texto;
+     el primary sigue usandose para fondos/acentos. Ver audit P0-1/P0-2. */
+  --primary-on-surface: color-mix(in srgb, var(--polaris-primary) 55%, #000000);
+  /* Color de foco de alto contraste sobre fondos slate (independiente del
+     partido). #1A56B0 da 6.0:1 sobre la sidebar light. Ver audit P0-4. */
+  --focus-ring: #1A56B0;
+
   --border-subtle: rgba(30, 41, 59, 0.08);
   --border-strong: rgba(30, 41, 59, 0.14);
   --glass-edge: rgba(255, 255, 255, 0.7);
@@ -154,6 +164,16 @@
   --text-secondary: #97A3B6;
   --text-tertiary: #5C6779;
   --text-on-primary: #FFFFFF;
+
+  /* Version del primary ACLARADA para usar como COLOR DE TEXTO/icono sobre
+     superficies oscuras (sidebar --bg-base-2 #0E131D). El primary "puro" falla
+     AA 4.5:1 como texto chico en dark para 6/8 paletas; este token mezcla 35%
+     blanco y garantiza >=4.5:1 en las 8 paletas (peor caso MORENA 4.90). Solo
+     para texto; el primary sigue usandose para fondos/acentos. Ver audit P0-1. */
+  --primary-on-surface: color-mix(in srgb, var(--polaris-primary) 65%, #FFFFFF);
+  /* Color de foco de alto contraste sobre fondos slate (independiente del
+     partido). #7FB0FF da 8.46:1 sobre la sidebar dark. Ver audit P0-4. */
+  --focus-ring: #7FB0FF;
 
   --border-subtle: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.15);
@@ -490,7 +510,11 @@
 }
 .app-shell__nav-item.is-active {
   background: var(--primary-soft);
-  color: var(--polaris-primary);
+  /* Texto/icono del estado activo: usa la version con contraste AA (>=4.5:1)
+     sobre la sidebar, NO el primary puro (fallaba AA en 6/8 light + 6/8 dark).
+     El fondo --primary-soft y la barra --polaris-primary siguen siendo el
+     acento de color. Ver audit P0-1/P0-2. */
+  color: var(--primary-on-surface);
   font-weight: 600;
 }
 .app-shell__nav-item.is-active svg {
@@ -629,6 +653,35 @@
   box-shadow:
     0 0 0 2px var(--bg-card),
     0 0 0 4px currentColor;
+}
+
+/* ===========================================================================
+   FOCO VISIBLE — chrome del shell (CSS plano). Los componentes React (Button,
+   Input) ya traen su propio focus-visible:ring; aqui cubrimos el shell, que no
+   tenia NINGUNA regla de foco (audit P0-4). Color de foco neutro de alto
+   contraste (--focus-ring, por tema) en vez del primary (que falla sobre slate
+   en varias paletas). Doble anillo: el primero en el fondo separa visualmente
+   el outline del control; el segundo es el indicador de foco.
+   =========================================================================== */
+.app-shell__nav-item:focus-visible,
+.tb-icon:focus-visible,
+.client-mini:focus-visible,
+.party-switch .sw2:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+/* Los swatches del party-switch son redondos y diminutos: anillo solido propio
+   para que el foco no se confunda con el estado aria-pressed. */
+.party-switch .sw2:focus-visible {
+  outline-offset: 3px;
+}
+/* Respaldo global: cualquier control interactivo del shell sin estilo de foco
+   propio recibe un outline visible (no suprimimos el del navegador). */
+.app-shell button:focus-visible,
+.app-shell a:focus-visible,
+.app-shell [tabindex]:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 @media (max-width: 1024px) {
