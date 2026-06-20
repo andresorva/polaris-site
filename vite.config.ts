@@ -6,7 +6,10 @@ export default defineConfig({
   base: '/',
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    // 'hidden' emits sourcemaps (so Sentry can upload + symbolicate) but does
+    // NOT append the //# sourceMappingURL comment to bundles -> maps are not
+    // referenced publicly. Avoids leaking source via the deployed assets.
+    sourcemap: 'hidden',
   },
   test: {
     environment: 'jsdom',

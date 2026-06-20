@@ -5,6 +5,60 @@
     <link rel="icon" type="image/png" href="/polaris-logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>POLARIS</title>
+    <script>
+      // Anti-flash (anti-FOUC): aplica data-theme/data-party + colores de marca
+      // ANTES del primer paint, leyendo localStorage. Debe mantenerse en sync
+      // con ThemeProvider (storage keys polaris_theme / polaris_client_id) y
+      // con clients.ts (mapa cliente -> party + paleta).
+      (function () {
+        try {
+          var root = document.documentElement
+          // --- Tema (light por defecto; data-theme="dark" solo en dark) ---
+          var mode = localStorage.getItem('polaris_theme') || 'system'
+          var resolved = mode
+          if (mode === 'system') {
+            resolved =
+              window.matchMedia &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light'
+          }
+          if (resolved === 'dark') root.setAttribute('data-theme', 'dark')
+          else root.removeAttribute('data-theme')
+
+          // --- Cliente -> partido + paleta (mirror de clients.ts) ---
+          var CLIENTS = {
+            orvananos: {
+              party: 'pan',
+              primary: '#0066CC',
+              dark: '#003D7A',
+              light: '#4D94DB',
+              accent: '#F4A53A',
+            },
+            astudillo: {
+              party: 'pvem',
+              primary: '#2E7D32',
+              dark: '#1B5E20',
+              light: '#66BB6A',
+              accent: '#FDD835',
+            },
+          }
+          var clientId = localStorage.getItem('polaris_client_id') || 'orvananos'
+          var c = CLIENTS[clientId] || CLIENTS.orvananos
+          root.setAttribute('data-party', c.party)
+          // Persistencia del slug de partido (contrato T0.2: 'polaris-party').
+          root.style.setProperty('--polaris-primary', c.primary)
+          root.style.setProperty('--polaris-primary-dark', c.dark)
+          root.style.setProperty('--polaris-primary-light', c.light)
+          root.style.setProperty('--polaris-accent', c.accent)
+          // data-animate-theme activo desde boot: cualquier cambio de partido
+          // posterior anima los tokens de color de marca (~420ms).
+          root.setAttribute('data-animate-theme', '')
+        } catch (e) {
+          /* localStorage no disponible: el ThemeProvider aplica defaults */
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

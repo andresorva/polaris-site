@@ -1,3 +1,23 @@
+/**
+ * Pulso en vivo (v3) - busqueda en tiempo real con stream SSE.
+ *
+ * Mockup de referencia: polaris-design-v3/05-pulso-en-vivo.html
+ *
+ * Contrato (Wave 2, ya en backend):
+ *   POST /api/v1/live-query   body { query, platforms, time_range, politician_id }
+ *   evento SSE "mention" con payload wire { plat, author, text, score, sent, eng,
+ *   timestamp, url } -> normalizado via normalizePulsoMention.
+ *
+ * El contrato anterior enviaba { question, context } -> 422. Aqui se usa el
+ * nombre nuevo de campo `query` + filtros planos `platforms`/`time_range`.
+ *
+ * Estados: idle (empty/radar) | streaming (live) | complete (summary) | error.
+ * Stagger de cards via keyframes streamIn (definido inline, file-local) y se
+ * desactiva con prefers-reduced-motion.
+ *
+ * REGLA 79: cero acentos en strings visibles.
+ */
+
 import {
   useCallback,
   useEffect,
@@ -8,22 +28,38 @@ import {
 } from 'react'
 import {
   AlertCircle,
-  BookmarkPlus,
   ExternalLink,
-  Loader2,
+  Heart,
+  MessageCircle,
+  Plus,
+  Radar,
+  Repeat2,
   Search,
   Square,
+  Star,
   X,
 } from 'lucide-react'
+
 import { PageHeader } from '../../components/layout/PageHeader'
 import { Card } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { PlatformChip } from '../../components/data-display/PlatformChip'
+import { SentimentBar } from '../../components/charts/SentimentBar'
+import type { SentimentCounts } from '../../components/charts/sentimentColors'
+import { DemoBadge } from '../../components/states/DemoBadge'
+import { EmptyState } from '../../components/states/EmptyState'
+import { ErrorState } from '../../components/states/ErrorState'
+
 import { useClientTheme } from '../../features/client-theme/useClientTheme'
 import { ENDPOINTS } from '../../lib/api/endpoints'
-import { streamPost, type SseEvent } from '../../lib/api/sse'
+import {
+  streamPost,
+  isPulsoMentionWire,
+  normalizePulsoMention,
+  type SseEvent,
+} from '../../lib/api/sse'
 import type { Mention, SentimentLabel } from '../../lib/api/types'
 import { formatNumber, formatRelativeTime } from '../../lib/utils/format'
 import { platformLabel } from '../../lib/utils/platform'
@@ -37,20 +73,19 @@ import { cn } from '../../lib/utils/cn'
 const DEFAULT_BASE_URL = 'https://web-production-d6505.up.railway.app'
 
 function getApiBase(): string {
-  const env = (import.meta as unknown as { env?: Record<string, string | undefined> })
-    .env
+  const env = (
+    import.meta as unknown as { env?: Record<string, string | undefined> }
+  ).env
   return (env?.VITE_API_BASE_URL ?? DEFAULT_BASE_URL).replace(/\/$/, '')
 }
 
 const PLATFORM_CHOICES: { id: string; label: string; defaultOn: boolean }[] = [
   { id: 'twitter', label: 'Twitter', defaultOn: true },
   { id: 'bluesky', label: 'Bluesky', defaultOn: true },
-  { id: 'instagram', label: 'Instagram', defaultOn: true },
-  { id: 'tiktok', label: 'TikTok', defaultOn: true },
-  { id: 'youtube', label: 'YouTube', defaultOn: true },
-  { id: 'news_mx', label: 'News MX', defaultOn: true },
-  { id: 'gdelt', label: 'GDELT', defaultOn: true },
-  { id: 'google_trends', label: 'Google Trends', defaultOn: false },
+  { id: 'instagram', label: 'Instagram', defaultOn: false },
+  { id: 'tiktok', label: 'TikTok', defaultOn: false },
+  { id: 'youtube', label: 'YouTube', defaultOn: false },
+  { id: 'news', label: 'News MX', defaultOn: true },
 ]
 
 const TIME_RANGE_OPTIONS: { value: string; label: string }[] = [
@@ -59,8 +94,7 @@ const TIME_RANGE_OPTIONS: { value: string; label: string }[] = [
   { value: '7d', label: 'Ultimos 7 dias' },
 ]
 
-const SAVED_SEARCHES_KEY = 'polaris_saved_searches'
-const CAVEAT_DISMISSED_KEY = 'polaris_pulso_caveat_dismissed_v1'
+const SAVED_SEARCHES_KEY = 'polaris_saved_searches_v3'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -75,31 +109,22 @@ type SavedSearch = {
   savedAt: number
 }
 
-type StreamSummary = {
-  total: number
-  byPlatform: Record<string, number>
-  bySentiment: Record<string, number>
-  topAuthors: { handle: string; count: number }[]
-}
+type StreamStatus = 'idle' | 'connecting' | 'streaming' | 'complete' | 'error'
 
 type StreamState = {
-  status: 'idle' | 'connecting' | 'streaming' | 'closed' | 'error' | 'aborted'
+  status: StreamStatus
   mentions: Mention[]
   progressMsg: string
   errorMsg: string | null
   startedAt: number | null
-  endedAt: number | null
-  summary: StreamSummary | null
 }
 
 type StreamAction =
   | { type: 'start' }
   | { type: 'progress'; message: string }
   | { type: 'mention'; mention: Mention }
-  | { type: 'summary'; summary: StreamSummary }
   | { type: 'done' }
   | { type: 'error'; message: string }
-  | { type: 'abort' }
   | { type: 'reset' }
 
 const initialStreamState: StreamState = {
@@ -108,8 +133,6 @@ const initialStreamState: StreamState = {
   progressMsg: '',
   errorMsg: null,
   startedAt: null,
-  endedAt: null,
-  summary: null,
 }
 
 function streamReducer(state: StreamState, action: StreamAction): StreamState {
@@ -130,7 +153,7 @@ function streamReducer(state: StreamState, action: StreamAction): StreamState {
         progressMsg: action.message,
       }
     case 'mention': {
-      // Dedupe by id (some backends echo the same mention across plataformas).
+      // Dedupe por id: algunos backends repiten una mencion entre plataformas.
       if (state.mentions.some((m) => m.id === action.mention.id)) {
         return state
       }
@@ -140,29 +163,12 @@ function streamReducer(state: StreamState, action: StreamAction): StreamState {
         mentions: [action.mention, ...state.mentions],
       }
     }
-    case 'summary':
-      return { ...state, summary: action.summary }
     case 'done':
-      return {
-        ...state,
-        status: 'closed',
-        progressMsg: 'Stream completado',
-        endedAt: Date.now(),
-      }
+      // Si erroramos antes, no pisamos el estado de error.
+      if (state.status === 'error') return state
+      return { ...state, status: 'complete', progressMsg: 'Busqueda completa' }
     case 'error':
-      return {
-        ...state,
-        status: 'error',
-        errorMsg: action.message,
-        endedAt: Date.now(),
-      }
-    case 'abort':
-      return {
-        ...state,
-        status: 'aborted',
-        progressMsg: 'Cancelado por el usuario',
-        endedAt: Date.now(),
-      }
+      return { ...state, status: 'error', errorMsg: action.message }
     default:
       return state
   }
@@ -172,23 +178,9 @@ function streamReducer(state: StreamState, action: StreamAction): StreamState {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function sentimentBadgeVariant(
-  label: SentimentLabel | null | undefined,
-): 'positive' | 'negative' | 'neutral' | 'mixed' | 'accent' | 'default' {
-  switch (label) {
-    case 'positive':
-      return 'positive'
-    case 'negative':
-      return 'negative'
-    case 'neutral':
-      return 'neutral'
-    case 'mixed':
-      return 'mixed'
-    case 'sarcastic':
-      return 'accent'
-    default:
-      return 'default'
-  }
+function prefersReducedMotion(): boolean {
+  if (typeof window === 'undefined' || !window.matchMedia) return false
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
 function truncate(text: string | null | undefined, n: number): string {
@@ -223,134 +215,150 @@ function persistSavedSearches(rows: SavedSearch[]) {
   try {
     localStorage.setItem(SAVED_SEARCHES_KEY, JSON.stringify(rows))
   } catch {
-    // Quota / private mode — silently noop.
+    // Quota / modo privado - noop silencioso.
   }
 }
 
-function isMention(value: unknown): value is Mention {
-  if (typeof value !== 'object' || value === null) return false
-  const v = value as Record<string, unknown>
-  return (
-    typeof v.id === 'string' &&
-    typeof v.platform === 'string' &&
-    typeof v.content === 'string'
-  )
-}
-
-function deriveSummary(mentions: Mention[]): StreamSummary {
-  const byPlatform: Record<string, number> = {}
-  const bySentiment: Record<string, number> = {}
-  const authorCounts: Record<string, number> = {}
+/** Agrupa el sentiment_label de las menciones en cubetas para SentimentBar. */
+function toSentimentCounts(mentions: Mention[]): SentimentCounts {
+  const counts: SentimentCounts = {}
   for (const m of mentions) {
-    byPlatform[m.platform] = (byPlatform[m.platform] ?? 0) + 1
-    const s = m.sentiment_label ?? 'unprocessed'
-    bySentiment[s] = (bySentiment[s] ?? 0) + 1
-    const handle = m.author_handle ?? m.author ?? null
-    if (handle) {
-      authorCounts[handle] = (authorCounts[handle] ?? 0) + 1
-    }
+    const lbl = m.sentiment_label
+    if (lbl === 'positive') counts.positive = (counts.positive ?? 0) + 1
+    else if (lbl === 'negative') counts.negative = (counts.negative ?? 0) + 1
+    else if (lbl === 'neutral') counts.neutral = (counts.neutral ?? 0) + 1
+    else if (lbl === 'mixed') counts.mixed = (counts.mixed ?? 0) + 1
+    else if (lbl === 'sarcastic')
+      counts.sarcastic = (counts.sarcastic ?? 0) + 1
   }
-  const topAuthors = Object.entries(authorCounts)
-    .map(([handle, count]) => ({ handle, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5)
-  return {
-    total: mentions.length,
-    byPlatform,
-    bySentiment,
-    topAuthors,
+  return counts
+}
+
+function negativePct(mentions: Mention[]): number {
+  const total = mentions.length
+  if (total === 0) return 0
+  const neg = mentions.filter((m) => m.sentiment_label === 'negative').length
+  return (neg / total) * 100
+}
+
+function topPlatform(mentions: Mention[]): string | null {
+  if (mentions.length === 0) return null
+  const counts: Record<string, number> = {}
+  for (const m of mentions) {
+    counts[m.platform] = (counts[m.platform] ?? 0) + 1
   }
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1])
+  return sorted.length > 0 ? sorted[0][0] : null
 }
 
 // ---------------------------------------------------------------------------
-// Inline MentionCard (lightweight — table card pattern is in fuentes.tsx)
+// Inline MentionCard - replica visual del .m-card del mockup 05
 // ---------------------------------------------------------------------------
 
-function MentionCard({ mention }: { mention: Mention }) {
+function scoreClass(label: SentimentLabel | null | undefined): string {
+  switch (label) {
+    case 'negative':
+      return 'bg-sentiment-negative/15 text-sentiment-negative'
+    case 'positive':
+      return 'bg-sentiment-positive/15 text-sentiment-positive'
+    default:
+      return 'bg-sunken text-ink-muted'
+  }
+}
+
+function MentionCard({
+  mention,
+  animate,
+  index,
+}: {
+  mention: Mention
+  animate: boolean
+  index: number
+}) {
+  const eng = mention.engagement_metrics ?? {}
+  const likes = typeof eng.likes === 'number' ? eng.likes : null
+  const reposts = typeof eng.reposts === 'number' ? eng.reposts : null
+  const comments = typeof eng.comments === 'number' ? eng.comments : null
+  const hasEng = likes !== null || reposts !== null || comments !== null
+
   return (
-    <Card padded className="space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <PlatformChip platform={mention.platform} />
-          <span className="font-mono text-xs text-ink-muted truncate">
-            {mention.author_handle ?? mention.author ?? 'desconocido'}
-          </span>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Badge variant={sentimentBadgeVariant(mention.sentiment_label)}>
-            {sentimentLabel(mention.sentiment_label)}
-          </Badge>
-          <span className="text-[10px] font-mono text-ink-subtle">
-            {formatRelativeTime(mention.collected_at)}
-          </span>
-        </div>
+    <article
+      className={cn(
+        'rounded-md border border-border bg-card p-3.5',
+        animate && 'pulso-stream-in',
+      )}
+      style={
+        animate
+          ? // Stagger leve solo para las primeras cards (evita jank en feeds largos).
+            { animationDelay: `${Math.min(index, 6) * 50}ms` }
+          : undefined
+      }
+    >
+      <div className="mb-1.5 flex items-center gap-2 text-[11px] text-ink-subtle">
+        <PlatformChip platform={mention.platform} />
+        <span className="truncate font-semibold text-ink-muted">
+          {mention.author_handle ?? mention.author ?? 'desconocido'}
+        </span>
+        <span className="text-ink-subtle">
+          {formatRelativeTime(mention.collected_at)}
+        </span>
+        <span
+          className={cn(
+            'ml-auto shrink-0 rounded-full px-2 py-0.5 font-mono text-[11px] font-semibold tabular-nums',
+            scoreClass(mention.sentiment_label),
+          )}
+          title={sentimentLabel(mention.sentiment_label)}
+        >
+          {typeof mention.sentiment_score === 'number'
+            ? mention.sentiment_score.toFixed(2)
+            : sentimentLabel(mention.sentiment_label)}
+        </span>
       </div>
+
       {mention.title ? (
-        <div className="text-sm font-semibold text-ink">
+        <div className="mb-0.5 text-sm font-semibold text-ink">
           {truncate(mention.title, 140)}
         </div>
       ) : null}
-      <div className="text-sm text-ink-muted leading-snug">
+
+      <p className="text-sm leading-relaxed text-ink">
         {truncate(mention.content, 280)}
-      </div>
-      {mention.url ? (
-        <a
-          href={mention.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-xs font-mono text-ink-muted hover:text-ink"
-        >
-          Ver fuente
-          <ExternalLink size={12} aria-hidden="true" />
-        </a>
-      ) : null}
-    </Card>
-  )
-}
+      </p>
 
-// ---------------------------------------------------------------------------
-// Caveat banner (Wave B-1 honestidad)
-// ---------------------------------------------------------------------------
-
-function CaveatBanner({ onDismiss }: { onDismiss: () => void }) {
-  return (
-    <div
-      role="alert"
-      className="flex items-start gap-3 rounded-md border border-amber-400/40 bg-amber-50 dark:bg-amber-500/10 p-3"
-    >
-      <AlertCircle
-        size={18}
-        aria-hidden="true"
-        className="mt-0.5 shrink-0 text-amber-700 dark:text-amber-300"
-      />
-      <div className="flex-1 min-w-0 text-sm text-amber-900 dark:text-amber-100 leading-snug">
-        <div className="font-semibold mb-0.5">
-          Endpoint Live Query bloqueado por bug Wave B-1
+      {hasEng || mention.url ? (
+        <div className="mt-2 flex items-center gap-4 font-mono text-[11px] text-ink-subtle">
+          {likes !== null ? (
+            <span className="inline-flex items-center gap-1.5">
+              <Heart size={12} aria-hidden="true" />
+              {formatNumber(likes, { compact: true })}
+            </span>
+          ) : null}
+          {reposts !== null ? (
+            <span className="inline-flex items-center gap-1.5">
+              <Repeat2 size={12} aria-hidden="true" />
+              {formatNumber(reposts, { compact: true })}
+            </span>
+          ) : null}
+          {comments !== null ? (
+            <span className="inline-flex items-center gap-1.5">
+              <MessageCircle size={12} aria-hidden="true" />
+              {formatNumber(comments, { compact: true })}
+            </span>
+          ) : null}
+          {mention.url ? (
+            <a
+              href={mention.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-auto inline-flex items-center gap-1 font-semibold text-primary hover:underline"
+            >
+              Ver fuente
+              <ExternalLink size={11} aria-hidden="true" />
+            </a>
+          ) : null}
         </div>
-        <p>
-          La interfaz funciona, pero el stream devuelve{' '}
-          <strong className="font-mono">0 mentions</strong> hasta que Wave B CC
-          arregle el dispatch bug (
-          <code className="font-mono">getattr(mod, "run_query", None)</code>{' '}
-          aplicado a modulo en lugar de clase) y los nombres de clase
-          (<code className="font-mono">SentimentMxAgent</code> →{' '}
-          <code className="font-mono">SentimentMXAgent</code>) en el backend.
-          Pulso en vivo se activa post-fix. Ver{' '}
-          <code className="font-mono">
-            /audits/2026-05-18-WAVE-B-HANDOFF-URGENT.md
-          </code>
-          .
-        </p>
-      </div>
-      <button
-        type="button"
-        onClick={onDismiss}
-        className="shrink-0 text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100"
-        aria-label="Ocultar aviso"
-      >
-        <X size={16} aria-hidden="true" />
-      </button>
-    </div>
+      ) : null}
+    </article>
   )
 }
 
@@ -362,24 +370,7 @@ export function Pulso() {
   const { client } = useClientTheme()
   const politicianId = client.politician_id
 
-  // ---------- Caveat dismissal ----------
-  const [caveatDismissed, setCaveatDismissed] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem(CAVEAT_DISMISSED_KEY) === '1'
-    } catch {
-      return false
-    }
-  })
-  const dismissCaveat = useCallback(() => {
-    setCaveatDismissed(true)
-    try {
-      localStorage.setItem(CAVEAT_DISMISSED_KEY, '1')
-    } catch {
-      // ignore
-    }
-  }, [])
-
-  // ---------- Search form state ----------
+  // ---------- Form state ----------
   const [query, setQuery] = useState('')
   const [platforms, setPlatforms] = useState<Set<string>>(
     () => new Set(PLATFORM_CHOICES.filter((p) => p.defaultOn).map((p) => p.id)),
@@ -390,7 +381,6 @@ export function Pulso() {
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(() =>
     safeReadSavedSearches(),
   )
-  const [savedDropdownOpen, setSavedDropdownOpen] = useState(false)
 
   const persistAndSet = useCallback((rows: SavedSearch[]) => {
     setSavedSearches(rows)
@@ -400,6 +390,8 @@ export function Pulso() {
   const handleSaveCurrent = useCallback(() => {
     const trimmed = query.trim()
     if (!trimmed) return
+    // Evita duplicados exactos por texto.
+    if (savedSearches.some((s) => s.query === trimmed)) return
     const label = trimmed.length > 40 ? trimmed.slice(0, 40) + '...' : trimmed
     const newItem: SavedSearch = {
       id: `s_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
@@ -409,18 +401,8 @@ export function Pulso() {
       timeRange,
       savedAt: Date.now(),
     }
-    persistAndSet([newItem, ...savedSearches].slice(0, 20))
+    persistAndSet([newItem, ...savedSearches].slice(0, 12))
   }, [query, platforms, timeRange, savedSearches, persistAndSet])
-
-  const handleLoadSaved = useCallback(
-    (s: SavedSearch) => {
-      setQuery(s.query)
-      setPlatforms(new Set(s.platforms))
-      setTimeRange(s.timeRange)
-      setSavedDropdownOpen(false)
-    },
-    [],
-  )
 
   const handleDeleteSaved = useCallback(
     (id: string) => {
@@ -432,166 +414,139 @@ export function Pulso() {
   // ---------- Stream state ----------
   const [stream, dispatch] = useReducer(streamReducer, initialStreamState)
   const abortRef = useRef<AbortController | null>(null)
-
-  // Auto-derive summary from accumulated mentions when stream closes.
-  useEffect(() => {
-    if (stream.status === 'closed' || stream.status === 'aborted') {
-      if (!stream.summary) {
-        dispatch({ type: 'summary', summary: deriveSummary(stream.mentions) })
-      }
-    }
-  }, [stream.status, stream.mentions, stream.summary])
+  const reduceMotion = useMemo(() => prefersReducedMotion(), [])
 
   const isStreaming =
     stream.status === 'connecting' || stream.status === 'streaming'
 
   // ---------- Submit ----------
-  const handleSubmit = useCallback(async () => {
-    const trimmed = query.trim()
-    if (!trimmed || isStreaming || !politicianId) return
+  const runSearch = useCallback(
+    async (term: string) => {
+      const trimmed = term.trim()
+      if (!trimmed || isStreaming) return
 
-    // Abort any leftover stream first.
-    abortRef.current?.abort()
-    const controller = new AbortController()
-    abortRef.current = controller
+      // Aborta cualquier stream previo.
+      abortRef.current?.abort()
+      const controller = new AbortController()
+      abortRef.current = controller
 
-    dispatch({ type: 'start' })
+      dispatch({ type: 'start' })
 
-    const url = `${getApiBase()}${ENDPOINTS.liveQuery}`
-    const body = {
-      politician_id: politicianId,
-      question: trimmed,
-      context: {
+      const url = `${getApiBase()}${ENDPOINTS.liveQuery}`
+      // CONTRATO NUEVO (Wave 2): campo `query` (antes `question`) + filtros
+      // planos `platforms` / `time_range`. El payload anterior con
+      // { question, context } devolvia 422.
+      const body = {
+        query: trimmed,
         platforms: Array.from(platforms),
         time_range: timeRange,
-      },
-    }
+        politician_id: politicianId,
+      }
 
-    await streamPost(
-      url,
-      body,
-      {
-        onEvent: (e: SseEvent) => {
-          // Backend SSE event taxonomy is best-effort — we accept several
-          // shapes and degrade gracefully.
-          const data = e.data
-          switch (e.event) {
-            case 'mention':
-            case 'message':
-              if (isMention(data)) {
-                dispatch({ type: 'mention', mention: data })
-              } else if (
-                typeof data === 'object' &&
-                data !== null &&
-                isMention((data as { mention?: unknown }).mention)
-              ) {
+      await streamPost(
+        url,
+        body,
+        {
+          onEvent: (e: SseEvent) => {
+            const data = e.data
+            switch (e.event) {
+              case 'mention':
+              case 'message': {
+                // Wire shape Pulso: { plat, author, text, score, sent, eng, ... }
+                if (isPulsoMentionWire(data)) {
+                  dispatch({
+                    type: 'mention',
+                    mention: normalizePulsoMention(data, {
+                      politicianId,
+                    }),
+                  })
+                } else if (typeof data === 'string') {
+                  dispatch({ type: 'progress', message: data })
+                }
+                break
+              }
+              case 'progress':
+              case 'status': {
+                if (typeof data === 'string') {
+                  dispatch({ type: 'progress', message: data })
+                } else if (
+                  typeof data === 'object' &&
+                  data !== null &&
+                  typeof (data as { message?: unknown }).message === 'string'
+                ) {
+                  dispatch({
+                    type: 'progress',
+                    message: (data as { message: string }).message,
+                  })
+                }
+                break
+              }
+              case 'done':
+              case 'complete':
+                dispatch({ type: 'done' })
+                break
+              case 'error':
                 dispatch({
-                  type: 'mention',
-                  mention: (data as { mention: Mention }).mention,
+                  type: 'error',
+                  message:
+                    typeof data === 'string'
+                      ? data
+                      : typeof data === 'object' &&
+                          data !== null &&
+                          typeof (data as { message?: unknown }).message ===
+                            'string'
+                        ? (data as { message: string }).message
+                        : 'Error en el stream',
                 })
-              } else if (typeof data === 'string') {
-                dispatch({ type: 'progress', message: data })
-              }
-              break
-            case 'progress':
-            case 'status':
-              if (typeof data === 'string') {
-                dispatch({ type: 'progress', message: data })
-              } else if (
-                typeof data === 'object' &&
-                data !== null &&
-                typeof (data as { message?: unknown }).message === 'string'
-              ) {
-                dispatch({
-                  type: 'progress',
-                  message: (data as { message: string }).message,
-                })
-              }
-              break
-            case 'summary':
-            case 'done':
-              if (
-                typeof data === 'object' &&
-                data !== null &&
-                typeof (data as { total?: unknown }).total === 'number'
-              ) {
-                const d = data as Partial<StreamSummary>
-                dispatch({
-                  type: 'summary',
-                  summary: {
-                    total: d.total ?? 0,
-                    byPlatform: d.byPlatform ?? {},
-                    bySentiment: d.bySentiment ?? {},
-                    topAuthors: d.topAuthors ?? [],
-                  },
-                })
-              }
-              break
-            case 'error':
-              dispatch({
-                type: 'error',
-                message:
-                  typeof data === 'string'
-                    ? data
-                    : typeof data === 'object' &&
-                        data !== null &&
-                        typeof (data as { message?: unknown }).message ===
-                          'string'
-                      ? (data as { message: string }).message
-                      : 'Error en el stream',
-              })
-              break
-            default:
-              // Unknown event — surface as progress message for debugging.
-              if (typeof data === 'string') {
-                dispatch({ type: 'progress', message: `[${e.event}] ${data}` })
-              }
-              break
-          }
+                break
+              default:
+                break
+            }
+          },
+          onError: (err) => {
+            const message =
+              typeof err === 'object' && err !== null
+                ? typeof (err as { detail?: unknown }).detail === 'string'
+                  ? (err as { detail: string }).detail
+                  : typeof (err as { statusText?: unknown }).statusText ===
+                      'string'
+                    ? `${(err as { status?: number }).status ?? 0} ${
+                        (err as { statusText: string }).statusText
+                      }`
+                    : err instanceof Error
+                      ? err.message
+                      : 'Error de conexion'
+                : 'Error de conexion'
+            dispatch({ type: 'error', message })
+          },
+          onClose: () => {
+            // onClose corre exactamente una vez. El reducer ignora `done` si ya
+            // estamos en error, asi que es seguro disparar aqui el cierre limpio.
+          },
         },
-        onError: (err) => {
-          const message =
-            typeof err === 'object' && err !== null
-              ? typeof (err as { detail?: unknown }).detail === 'string'
-                ? (err as { detail: string }).detail
-                : typeof (err as { statusText?: unknown }).statusText ===
-                    'string'
-                  ? `${(err as { status?: number }).status ?? 0} ${
-                      (err as { statusText: string }).statusText
-                    }`
-                  : err instanceof Error
-                    ? err.message
-                    : 'Error de conexion'
-              : 'Error de conexion'
-          dispatch({ type: 'error', message })
-        },
-        onClose: () => {
-          // Only fire `done` if we haven't already errored or aborted.
-          // Reading state from a reducer ref isn't great here; we rely on the
-          // reducer to ignore `done` if it's already in a terminal state.
-          // Simpler: dispatch a no-op-safe action.
-          // (The reducer treats `done` as setting status=closed unconditionally
-          // — that's acceptable because onClose fires exactly once per stream.)
-        },
-      },
-      controller.signal,
-    )
+        controller.signal,
+      )
 
-    // After streamPost resolves, transition based on whether we aborted.
-    if (controller.signal.aborted) {
-      // 'abort' was already dispatched by the cancel button handler.
-      return
-    }
-    // If no error was dispatched mid-stream, this is a successful close.
-    dispatch({ type: 'done' })
-  }, [query, isStreaming, politicianId, platforms, timeRange])
+      if (controller.signal.aborted) {
+        // Cancelacion manual: volvemos a idle solo si no hubo data util.
+        return
+      }
+      dispatch({ type: 'done' })
+    },
+    [isStreaming, platforms, timeRange, politicianId],
+  )
+
+  const handleSubmit = useCallback(() => {
+    void runSearch(query)
+  }, [runSearch, query])
 
   const handleCancel = useCallback(() => {
     if (abortRef.current) {
       abortRef.current.abort()
       abortRef.current = null
     }
-    dispatch({ type: 'abort' })
+    // Tras cancelar mostramos lo acumulado como completo (o idle si vacio).
+    dispatch({ type: 'done' })
   }, [])
 
   const handleReset = useCallback(() => {
@@ -600,42 +555,22 @@ export function Pulso() {
     dispatch({ type: 'reset' })
   }, [])
 
-  // Cleanup on unmount.
+  const handleLoadSaved = useCallback(
+    (s: SavedSearch) => {
+      setQuery(s.query)
+      setPlatforms(new Set(s.platforms))
+      setTimeRange(s.timeRange)
+      void runSearch(s.query)
+    },
+    [runSearch],
+  )
+
+  // Cleanup al desmontar.
   useEffect(() => {
     return () => {
       abortRef.current?.abort()
     }
   }, [])
-
-  // ---------- Derived sentiment percentages for progress bar ----------
-  const sentimentPct = useMemo(() => {
-    const total = stream.mentions.length
-    if (total === 0) {
-      return { positive: 0, negative: 0, neutral: 0, mixed: 0, unprocessed: 0 }
-    }
-    const counts = {
-      positive: 0,
-      negative: 0,
-      neutral: 0,
-      mixed: 0,
-      unprocessed: 0,
-    }
-    for (const m of stream.mentions) {
-      const lbl = m.sentiment_label
-      if (lbl === 'positive') counts.positive++
-      else if (lbl === 'negative') counts.negative++
-      else if (lbl === 'neutral') counts.neutral++
-      else if (lbl === 'mixed' || lbl === 'sarcastic') counts.mixed++
-      else counts.unprocessed++
-    }
-    return {
-      positive: (counts.positive / total) * 100,
-      negative: (counts.negative / total) * 100,
-      neutral: (counts.neutral / total) * 100,
-      mixed: (counts.mixed / total) * 100,
-      unprocessed: (counts.unprocessed / total) * 100,
-    }
-  }, [stream.mentions])
 
   function togglePlatform(id: string) {
     setPlatforms((prev) => {
@@ -649,98 +584,146 @@ export function Pulso() {
   const canSubmit =
     query.trim().length > 0 && !isStreaming && !!politicianId
 
+  // ---------- Derived ----------
+  const sentCounts = useMemo(
+    () => toSentimentCounts(stream.mentions),
+    [stream.mentions],
+  )
+  const negPct = useMemo(() => negativePct(stream.mentions), [stream.mentions])
+  const topPlat = useMemo(
+    () => topPlatform(stream.mentions),
+    [stream.mentions],
+  )
+
+  const showStreamPanel = stream.status !== 'idle'
+  const hasMentions = stream.mentions.length > 0
+
+  // El stream live-query degrada a 0 mentions hasta que el backend cablee
+  // dispatch real -> el panel puede quedar vacio/parcial; marcamos con DemoBadge.
+  // API PENDIENTE: persistencia en DB de las menciones del stream (Wave B-1).
+
   return (
-    <div className="p-4 sm:p-6 space-y-6">
+    <div className="space-y-6 p-4 sm:p-6">
+      {/* Keyframes file-local (no se puede editar index.css). Respetan
+          prefers-reduced-motion: si esta activo, no aplicamos la clase. */}
+      <style>{`
+        @keyframes pulsoStreamIn {
+          from { opacity: 0; transform: translateY(14px) scale(0.99); }
+          to { opacity: 1; transform: none; }
+        }
+        .pulso-stream-in { animation: pulsoStreamIn 0.45s cubic-bezier(0.16,1,0.3,1) both; transform-origin: top center; }
+        @keyframes pulsoLiveDot {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.45; transform: scale(0.82); }
+        }
+        .pulso-live-dot { animation: pulsoLiveDot 1.4s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) {
+          .pulso-stream-in { animation: none; }
+          .pulso-live-dot { animation: none; }
+        }
+      `}</style>
+
       <PageHeader
         title="Pulso en vivo"
-        subtitle="Busqueda real-time con SSE stream + persistencia (Wave B-1)"
+        subtitle="Busqueda en tiempo real con stream SSE. Las menciones caen conforme se detectan y se clasifican on-the-fly por sentimiento."
       />
 
-      {!caveatDismissed ? <CaveatBanner onDismiss={dismissCaveat} /> : null}
-
-      {/* ---- Search panel ------------------------------------------------- */}
+      {/* ---- Search panel --------------------------------------------------- */}
       <Card className="space-y-4">
-        <div className="flex flex-col gap-3">
-          <label
-            htmlFor="pulso-query"
-            className="block text-[10px] font-mono uppercase tracking-wide text-ink-subtle"
-          >
-            Buscar en tiempo real
-          </label>
-          <div className="flex gap-2">
+        <div className="text-[10px] font-mono uppercase tracking-wide text-ink-subtle">
+          Buscar en tiempo real
+        </div>
+
+        <form
+          className="flex flex-col gap-2 sm:flex-row"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (canSubmit) handleSubmit()
+          }}
+        >
+          <div className="relative flex-1">
+            <Search
+              size={18}
+              aria-hidden="true"
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle"
+            />
             <Input
               id="pulso-query"
               type="search"
-              placeholder="Ej: corrupcion, AMLO, INE, marcha 2026..."
+              placeholder="Cuajimalpa, baches, obras inconclusas..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && canSubmit) handleSubmit()
-              }}
               disabled={isStreaming}
-              className="flex-1"
+              className="h-11 w-full pl-10"
+              aria-label="Termino de busqueda"
             />
-            {isStreaming ? (
-              <Button
-                variant="secondary"
-                onClick={handleCancel}
-                aria-label="Cancelar stream"
-              >
-                <Square size={14} aria-hidden="true" />
-                Cancelar
-              </Button>
-            ) : (
-              <Button onClick={handleSubmit} disabled={!canSubmit}>
-                <Search size={14} aria-hidden="true" />
-                Buscar (SSE)
-              </Button>
-            )}
           </div>
-        </div>
+          {isStreaming ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleCancel}
+              className="h-11"
+              aria-label="Detener stream"
+            >
+              <Square size={15} aria-hidden="true" />
+              Detener
+            </Button>
+          ) : (
+            <Button type="submit" disabled={!canSubmit} className="h-11">
+              <Radar size={16} aria-hidden="true" />
+              Buscar
+            </Button>
+          )}
+        </form>
 
-        <div className="flex flex-col lg:flex-row lg:items-end gap-3">
-          <div className="flex-1">
-            <div className="text-[10px] font-mono uppercase tracking-wide text-ink-subtle mb-1">
+        {!politicianId ? (
+          <p className="text-xs font-mono text-sentiment-negative">
+            Selecciona un cliente para iniciar la busqueda.
+          </p>
+        ) : null}
+
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="flex flex-1 flex-wrap items-center gap-2">
+            <span className="text-[10px] font-mono uppercase tracking-wide text-ink-subtle">
               Plataformas
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {PLATFORM_CHOICES.map((p) => {
-                const active = platforms.has(p.id)
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => togglePlatform(p.id)}
-                    disabled={isStreaming}
-                    aria-pressed={active}
-                    className={cn(
-                      'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-mono uppercase tracking-wide border transition-colors',
-                      active
-                        ? 'bg-primary text-white border-primary'
-                        : 'bg-surface-elevated text-ink border-border hover:bg-black/[0.04] dark:hover:bg-white/[0.04]',
-                      isStreaming && 'opacity-60 cursor-not-allowed',
-                    )}
-                  >
-                    {p.label}
-                  </button>
-                )
-              })}
-            </div>
+            </span>
+            {PLATFORM_CHOICES.map((p) => {
+              const active = platforms.has(p.id)
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => togglePlatform(p.id)}
+                  disabled={isStreaming}
+                  aria-pressed={active}
+                  className={cn(
+                    'inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-mono font-semibold uppercase tracking-wide transition-colors',
+                    active
+                      ? 'border-primary bg-primary text-white'
+                      : 'border-border bg-card text-ink-muted hover:bg-black/[0.04] dark:hover:bg-white/[0.04]',
+                    isStreaming && 'cursor-not-allowed opacity-60',
+                  )}
+                >
+                  {p.label}
+                </button>
+              )
+            })}
           </div>
 
-          <div>
+          <div className="flex items-center gap-2">
             <label
               htmlFor="pulso-range"
-              className="block text-[10px] font-mono uppercase tracking-wide text-ink-subtle mb-1"
+              className="text-[10px] font-mono uppercase tracking-wide text-ink-subtle"
             >
-              Rango temporal
+              Rango
             </label>
             <select
               id="pulso-range"
               value={timeRange}
               onChange={(e) => setTimeRange(e.target.value)}
               disabled={isStreaming}
-              className="bg-surface-elevated border border-border rounded-md px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary h-10 disabled:opacity-50"
+              className="h-9 rounded-full border border-border bg-card px-3 text-xs text-ink focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
             >
               {TIME_RANGE_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -750,284 +733,256 @@ export function Pulso() {
             </select>
           </div>
         </div>
-
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 pt-1 border-t border-border">
-          <div className="relative">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setSavedDropdownOpen((s) => !s)}
-              disabled={savedSearches.length === 0}
-              aria-haspopup="listbox"
-              aria-expanded={savedDropdownOpen}
-            >
-              Busquedas guardadas ({savedSearches.length})
-            </Button>
-            {savedDropdownOpen && savedSearches.length > 0 ? (
-              <div
-                role="listbox"
-                className="absolute z-10 mt-1 w-72 max-h-72 overflow-auto bg-surface-elevated border border-border rounded-md shadow-lg"
-              >
-                {savedSearches.map((s) => (
-                  <div
-                    key={s.id}
-                    className="flex items-center justify-between gap-2 px-3 py-2 hover:bg-black/[0.04] dark:hover:bg-white/[0.04] border-b border-border last:border-b-0"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handleLoadSaved(s)}
-                      className="flex-1 text-left text-sm text-ink truncate"
-                    >
-                      <div className="truncate">{s.label}</div>
-                      <div className="text-[10px] font-mono text-ink-subtle">
-                        {s.platforms.length} plataformas - {s.timeRange}
-                      </div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteSaved(s.id)}
-                      aria-label="Eliminar busqueda guardada"
-                      className="text-ink-subtle hover:text-sentiment-negative shrink-0"
-                    >
-                      <X size={14} aria-hidden="true" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleSaveCurrent}
-            disabled={!query.trim() || isStreaming}
-          >
-            <BookmarkPlus size={14} aria-hidden="true" />
-            Guardar busqueda actual
-          </Button>
-        </div>
       </Card>
 
-      {/* ---- Live progress + sentiment bar -------------------------------- */}
-      {stream.status !== 'idle' ? (
-        <Card className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              {isStreaming ? (
-                <Loader2
-                  size={14}
-                  className="animate-spin text-primary shrink-0"
-                  aria-hidden="true"
-                />
-              ) : null}
-              <span className="text-sm font-mono text-ink truncate">
-                {stream.progressMsg || 'Procesando...'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <Badge variant="default">
-                {stream.mentions.length} mentions
-              </Badge>
+      {/* ---- Stream panel --------------------------------------------------- */}
+      {showStreamPanel ? (
+        <Card className="relative space-y-4">
+          <DemoBadge className="absolute right-3 top-3" />
+
+          <div className="flex flex-wrap items-center gap-3">
+            <span
+              className={cn(
+                'inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide',
+                isStreaming ? 'text-sentiment-negative' : 'text-ink-subtle',
+              )}
+            >
+              <span
+                className={cn(
+                  'inline-block h-2 w-2 rounded-full',
+                  isStreaming
+                    ? 'bg-sentiment-negative pulso-live-dot'
+                    : 'bg-ink-subtle',
+                )}
+                aria-hidden="true"
+              />
+              Live stream
+            </span>
+            <span className="text-sm text-ink-subtle">
+              -{' '}
+              <span className="font-mono font-semibold text-ink tabular-nums">
+                {formatNumber(stream.mentions.length)}
+              </span>{' '}
+              menciones encontradas
+            </span>
+            <span className="ml-auto">
               {stream.status === 'error' ? (
                 <Badge variant="negative">Error</Badge>
-              ) : stream.status === 'aborted' ? (
-                <Badge variant="default">Cancelado</Badge>
-              ) : stream.status === 'closed' ? (
-                <Badge variant="positive">Completado</Badge>
+              ) : stream.status === 'complete' ? (
+                <Badge variant="positive">Completo</Badge>
               ) : (
                 <Badge variant="accent">En vivo</Badge>
               )}
-              {!isStreaming ? (
-                <Button variant="ghost" size="sm" onClick={handleReset}>
-                  Limpiar
+            </span>
+            {!isStreaming ? (
+              <Button variant="ghost" size="sm" onClick={handleReset}>
+                Limpiar
+              </Button>
+            ) : null}
+          </div>
+
+          {isStreaming && stream.progressMsg ? (
+            <div className="font-mono text-xs text-ink-subtle">
+              {stream.progressMsg}
+            </div>
+          ) : null}
+
+          {/* ---- Summary (estado complete) -------------------------------- */}
+          {stream.status === 'complete' && hasMentions ? (
+            <div className="rounded-md border border-primary/30 bg-primary/[0.06] p-4">
+              <div className="mb-3 text-sm font-semibold text-ink">
+                Busqueda completa
+              </div>
+              <div className="flex flex-wrap gap-8">
+                <div>
+                  <div className="font-mono text-xl font-semibold tabular-nums text-ink">
+                    {formatNumber(stream.mentions.length)}
+                  </div>
+                  <div className="text-[11px] text-ink-subtle">menciones</div>
+                </div>
+                <div>
+                  <div className="font-mono text-xl font-semibold tabular-nums text-sentiment-negative">
+                    {negPct.toFixed(0)}%
+                  </div>
+                  <div className="text-[11px] text-ink-subtle">negativo</div>
+                </div>
+                <div>
+                  <div className="font-mono text-xl font-semibold text-ink">
+                    {topPlat ? platformLabel(topPlat) : '-'}
+                  </div>
+                  <div className="text-[11px] text-ink-subtle">
+                    plataforma top
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleSaveCurrent}
+                  disabled={!query.trim()}
+                >
+                  <Star size={14} aria-hidden="true" />
+                  Guardar busqueda
                 </Button>
-              ) : null}
-            </div>
-          </div>
-
-          {stream.errorMsg ? (
-            <div className="text-xs font-mono text-sentiment-negative">
-              {stream.errorMsg}
-            </div>
-          ) : null}
-
-          {/* Sentiment progress bar — segmented, animated via Tailwind transition */}
-          {stream.mentions.length > 0 ? (
-            <div>
-              <div className="text-[10px] font-mono uppercase tracking-wide text-ink-subtle mb-1">
-                Distribucion de sentimiento (live)
-              </div>
-              <div
-                className="flex h-3 w-full overflow-hidden rounded-full bg-border"
-                role="img"
-                aria-label="Distribucion de sentimiento en vivo"
-              >
-                <div
-                  className="bg-sentiment-positive transition-[width] duration-300"
-                  style={{ width: `${sentimentPct.positive}%` }}
-                  title={`Positivo ${sentimentPct.positive.toFixed(1)}%`}
-                />
-                <div
-                  className="bg-sentiment-neutral transition-[width] duration-300"
-                  style={{ width: `${sentimentPct.neutral}%` }}
-                  title={`Neutral ${sentimentPct.neutral.toFixed(1)}%`}
-                />
-                <div
-                  className="bg-sentiment-mixed transition-[width] duration-300"
-                  style={{ width: `${sentimentPct.mixed}%` }}
-                  title={`Mixto ${sentimentPct.mixed.toFixed(1)}%`}
-                />
-                <div
-                  className="bg-sentiment-negative transition-[width] duration-300"
-                  style={{ width: `${sentimentPct.negative}%` }}
-                  title={`Negativo ${sentimentPct.negative.toFixed(1)}%`}
-                />
-                <div
-                  className="bg-ink-subtle/40 transition-[width] duration-300"
-                  style={{ width: `${sentimentPct.unprocessed}%` }}
-                  title={`Sin clasificar ${sentimentPct.unprocessed.toFixed(1)}%`}
-                />
-              </div>
-              <div className="mt-1 flex flex-wrap gap-2 text-[10px] font-mono text-ink-muted tabular-nums">
-                <span className="text-sentiment-positive">
-                  + {sentimentPct.positive.toFixed(0)}%
-                </span>
-                <span className="text-sentiment-neutral">
-                  = {sentimentPct.neutral.toFixed(0)}%
-                </span>
-                <span className="text-sentiment-mixed">
-                  ~ {sentimentPct.mixed.toFixed(0)}%
-                </span>
-                <span className="text-sentiment-negative">
-                  - {sentimentPct.negative.toFixed(0)}%
-                </span>
-                <span className="text-ink-subtle">
-                  ? {sentimentPct.unprocessed.toFixed(0)}%
-                </span>
               </div>
             </div>
           ) : null}
-        </Card>
-      ) : null}
 
-      {/* ---- Live feed (streaming mentions) ------------------------------- */}
-      {stream.mentions.length > 0 ? (
-        <div className="space-y-3">
-          <div className="text-[10px] font-mono uppercase tracking-wide text-ink-subtle">
-            Feed en vivo - {stream.mentions.length} mentions
-          </div>
-          <div className="space-y-2">
-            {stream.mentions.map((m) => (
-              <MentionCard key={m.id} mention={m} />
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {/* ---- Summary card (post-stream) ----------------------------------- */}
-      {(stream.status === 'closed' || stream.status === 'aborted') &&
-      stream.summary ? (
-        <Card className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-ink">
-              Resumen del stream
-            </h2>
-            <Badge variant="default">
-              {formatNumber(stream.summary.total)} mentions
-            </Badge>
-          </div>
-
-          {stream.summary.total === 0 ? (
-            <p className="text-xs font-mono text-ink-muted">
-              El backend no devolvio mentions. Esto es esperado mientras Wave
-              B-1 esta bloqueada (ver banner arriba).
-            </p>
+          {/* ---- Error state ---------------------------------------------- */}
+          {stream.status === 'error' ? (
+            <ErrorState
+              title="Conexion SSE interrumpida"
+              description={
+                stream.errorMsg
+                  ? `El stream se corto: ${stream.errorMsg}`
+                  : 'El stream se corto. Reintenta la busqueda.'
+              }
+              onRetry={() => void runSearch(query)}
+              retryLabel="Reintentar"
+            />
+          ) : !hasMentions && !isStreaming ? (
+            /* ---- Empty post-busqueda (0 mentions) ------------------------- */
+            <EmptyState
+              title="Sin menciones para este termino"
+              description="El stream no devolvio resultados para los filtros actuales. Prueba con otra palabra clave, mas plataformas o un rango mas amplio."
+              icon={<Radar size={48} strokeWidth={1.5} />}
+            />
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
+            /* ---- Data + live ---------------------------------------------- */
+            <div className="space-y-3">
               <div>
-                <div className="text-[10px] font-mono uppercase tracking-wide text-ink-subtle mb-1">
-                  Plataformas
-                </div>
-                <div className="space-y-1">
-                  {Object.entries(stream.summary.byPlatform)
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 6)
-                    .map(([p, count]) => (
-                      <div
-                        key={p}
-                        className="flex items-center justify-between gap-2 text-xs font-mono"
-                      >
-                        <span className="text-ink-muted truncate">
-                          {platformLabel(p)}
-                        </span>
-                        <span className="text-ink tabular-nums">
-                          {formatNumber(count)}
-                        </span>
-                      </div>
-                    ))}
+                <SentimentBar
+                  counts={sentCounts}
+                  height={8}
+                  ariaLabel="Distribucion de sentimiento en vivo"
+                />
+                <div className="mt-1.5 font-mono text-[11px] text-ink-subtle">
+                  <span className="font-semibold text-sentiment-negative">
+                    {negPct.toFixed(0)}%
+                  </span>{' '}
+                  negativo - sentimiento en vivo
                 </div>
               </div>
 
-              <div>
-                <div className="text-[10px] font-mono uppercase tracking-wide text-ink-subtle mb-1">
-                  Sentimiento
+              {hasMentions ? (
+                <div className="space-y-2.5">
+                  {stream.mentions.map((m, i) => (
+                    <MentionCard
+                      key={m.id}
+                      mention={m}
+                      animate={!reduceMotion}
+                      index={i}
+                    />
+                  ))}
                 </div>
-                <div className="space-y-1">
-                  {Object.entries(stream.summary.bySentiment)
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([s, count]) => (
-                      <div
-                        key={s}
-                        className="flex items-center justify-between gap-2 text-xs font-mono"
-                      >
-                        <span className="text-ink-muted">
-                          {sentimentLabel(s as SentimentLabel)}
-                        </span>
-                        <span className="text-ink tabular-nums">
-                          {formatNumber(count)}
-                        </span>
-                      </div>
-                    ))}
+              ) : (
+                <div className="py-6 text-center font-mono text-xs text-ink-subtle">
+                  Esperando menciones del stream...
                 </div>
-              </div>
-
-              {stream.summary.topAuthors.length > 0 ? (
-                <div className="sm:col-span-2">
-                  <div className="text-[10px] font-mono uppercase tracking-wide text-ink-subtle mb-1">
-                    Top autores
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {stream.summary.topAuthors.map((a) => (
-                      <Badge key={a.handle} variant="default">
-                        <span className="font-mono">{a.handle}</span>
-                        <span className="text-ink-subtle ml-1">
-                          x{a.count}
-                        </span>
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
+              )}
             </div>
           )}
-
-          <div className="pt-2 border-t border-border">
-            <p className="text-[11px] text-ink-subtle">
-              <strong className="font-mono">Topics:</strong> requiere
-              integracion con classifier (Track 2 pendiente).{' '}
-              <strong className="font-mono">Persistencia:</strong> Wave B-1
-              activara guardado en DB — actualmente mentions se descartan al
-              cerrar.{' '}
-              <a
-                href="#/fuentes"
-                className="font-mono underline underline-offset-2 hover:text-ink"
-              >
-                Ver detalle de cada mention en Fuentes
-              </a>
-            </p>
-          </div>
         </Card>
-      ) : null}
+      ) : (
+        /* ---- Idle (radar / empty inicial) -------------------------------- */
+        <Card className="flex flex-col items-center justify-center gap-3 py-14 text-center">
+          <Radar
+            size={48}
+            strokeWidth={1.5}
+            className="text-primary"
+            aria-hidden="true"
+          />
+          <h3 className="text-base font-semibold text-ink">
+            Que quieres buscar?
+          </h3>
+          <p className="max-w-md text-sm text-ink-muted">
+            Teclea un termino y presiona Buscar. Las menciones empezaran a caer
+            en vivo, clasificadas por sentimiento al instante.
+          </p>
+        </Card>
+      )}
+
+      {/* ---- Saved searches ------------------------------------------------- */}
+      <Card className="space-y-3">
+        <div className="text-[10px] font-mono uppercase tracking-wide text-ink-subtle">
+          Busquedas guardadas
+        </div>
+        {savedSearches.length === 0 ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm text-ink-muted">
+              Aun no hay busquedas guardadas.
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSaveCurrent}
+              disabled={!query.trim() || isStreaming}
+            >
+              <Plus size={14} aria-hidden="true" />
+              Guardar busqueda actual
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2">
+            {savedSearches.map((s) => (
+              <span
+                key={s.id}
+                className="group inline-flex items-center gap-2 rounded-full border border-border bg-sunken px-3 py-1.5 text-sm text-ink-muted transition-colors hover:border-primary/40 hover:text-ink"
+              >
+                <button
+                  type="button"
+                  onClick={() => handleLoadSaved(s)}
+                  disabled={isStreaming}
+                  className="inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  title={`${s.platforms.length} plataformas - ${s.timeRange}`}
+                >
+                  <Star
+                    size={13}
+                    className="text-accent"
+                    aria-hidden="true"
+                  />
+                  {s.label}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteSaved(s.id)}
+                  aria-label={`Eliminar busqueda ${s.label}`}
+                  className="text-ink-subtle hover:text-sentiment-negative"
+                >
+                  <X size={13} aria-hidden="true" />
+                </button>
+              </span>
+            ))}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSaveCurrent}
+              disabled={!query.trim() || isStreaming}
+            >
+              <Plus size={14} aria-hidden="true" />
+              Guardar busqueda
+            </Button>
+          </div>
+        )}
+      </Card>
+
+      {/* ---- Honestidad: estado real del backend -------------------------- */}
+      <div
+        role="note"
+        className="flex items-start gap-2.5 rounded-md border border-border-subtle bg-sunken p-3 text-[11px] leading-relaxed text-ink-subtle"
+      >
+        <AlertCircle size={14} aria-hidden="true" className="mt-0.5 shrink-0" />
+        <p>
+          El stream usa el contrato Wave 2 (campo{' '}
+          <code className="font-mono">query</code> + filtros{' '}
+          <code className="font-mono">platforms</code> /{' '}
+          <code className="font-mono">time_range</code>). Si el dispatch del
+          backend no esta cableado, el feed degrada a 0 menciones (estado vacio
+          honesto). La persistencia en DB de las menciones del stream sigue
+          pendiente (Wave B-1).
+        </p>
+      </div>
     </div>
   )
 }

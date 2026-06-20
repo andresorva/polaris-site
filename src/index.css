@@ -1,42 +1,690 @@
-@import '@fontsource/inter/400.css';
-@import '@fontsource/inter/500.css';
-@import '@fontsource/inter/600.css';
-@import '@fontsource/inter/700.css';
+/* ============================================================================
+   POLARIS — Design Foundation (v3)
+   Inteligencia politica. Memoria total. Mexicana.
+   --------------------------------------------------------------------------
+   Tokens, multi-tenant party theming, light/dark, glass, shadows, type.
+   Migrado del namespace --polaris-* (v2) al sistema v3 (bg / text / sent).
+   Los nombres --polaris-primary* se conservan porque el theming engine
+   (ThemeProvider) los setea inline por cliente y varios charts los leen directo.
+   Se agregan alias legacy para no romper consumidores fuera de esta card.
+   Regla 79: cero acentos / n en strings UI. (Comentarios pueden usar acentos.)
+   ============================================================================ */
+
+/* --- Fuentes ---------------------------------------------------------------
+   Geist (UI) como fuente variable + IBM Plex Mono (numeros/data).
+   IBM Plex Mono no tiene paquete -variable en fontsource: se usa el estatico
+   ya presente en el repo (pesos 400/500). */
+@import '@fontsource-variable/geist/index.css';
 @import '@fontsource/ibm-plex-mono/400.css';
 @import '@fontsource/ibm-plex-mono/500.css';
+@import '@fontsource/ibm-plex-mono/600.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ---------------------------------------------------------------------------
+   @property registrations — habilitan la animacion suave de los 4 tokens de
+   color de marca al cambiar de partido (la transicion "wow" multi-tenant).
+--------------------------------------------------------------------------- */
+@property --polaris-primary       { syntax: '<color>'; inherits: true; initial-value: #0066CC; }
+@property --polaris-primary-dark  { syntax: '<color>'; inherits: true; initial-value: #003D7A; }
+@property --polaris-primary-light { syntax: '<color>'; inherits: true; initial-value: #4D94DB; }
+@property --polaris-accent        { syntax: '<color>'; inherits: true; initial-value: #F4A53A; }
+
+/* ===========================================================================
+   TOKENS — base (constantes, no cambian por tema ni partido)
+   =========================================================================== */
 :root {
+  /* --- Familias tipograficas ------------------------------------------- */
+  --font-ui: 'Geist Variable', 'Geist', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
+  --font-display: var(--font-ui);
+
+  /* --- Escala de tipo -------------------------------------------------- */
+  --text-2xs: 0.6875rem;   /* 11px micro labels */
+  --text-xs:  0.75rem;     /* 12px */
+  --text-sm:  0.8125rem;   /* 13px */
+  --text-base:0.9375rem;   /* 15px body */
+  --text-md:  1.0625rem;   /* 17px */
+  --text-lg:  1.3125rem;   /* 21px */
+  --text-xl:  1.625rem;    /* 26px */
+  --text-2xl: 2.0625rem;   /* 33px */
+  --text-3xl: clamp(2.4rem, 1.8rem + 2.6vw, 3.25rem);
+  --text-4xl: clamp(3rem, 2rem + 4.4vw, 4.5rem);
+
+  --tracking-tight: -0.02em;
+  --tracking-tighter: -0.04em;
+  --tracking-wide: 0.02em;
+  --tracking-label: 0.08em;
+
+  /* --- Escala de espaciado (base 4) ------------------------------------ */
+  --space-1: 4px;   --space-2: 8px;   --space-3: 12px;  --space-4: 16px;
+  --space-5: 24px;  --space-6: 32px;  --space-7: 48px;  --space-8: 64px;
+  --space-9: 96px;
+
+  /* --- Radios ---------------------------------------------------------- */
+  --radius-xs: 6px;   --radius-sm: 10px;  --radius-md: 16px;
+  --radius-lg: 24px;  --radius-xl: 32px;  --radius-pill: 9999px;
+
+  /* --- Semanticos (constantes cross-party) ----------------------------- */
+  --success: #2E7D32;  --success-soft: #2E7D3220;
+  --warning: #F57C00;  --warning-soft: #F57C0020;
+  --error:   #D32F2F;  --error-soft:   #D32F2F20;
+  --info:    #1976D2;  --info-soft:    #1976D220;
+  --watch:   #FB8C00;
+
+  /* --- Paleta de sentimiento ------------------------------------------- */
+  /* sarcastic + unknown se AGREGAN aqui: antes sentiment.ts las referenciaba
+     sin existir y sarcastic caia al gris fallback #888. */
+  --sent-positive: #2E9E5B;
+  --sent-negative: #E03B3B;
+  --sent-neutral:  #8B93A3;
+  --sent-mixed:    #E0922B;
+  --sent-sarcastic:#8B5CF6;
+  --sent-unknown:  #8893A4;
+
+  /* --- Motion ---------------------------------------------------------- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --theme-transition: 420ms var(--ease-in-out);
+
+  color-scheme: light;
+}
+
+/* ===========================================================================
+   NEUTRALES — LIGHT (tema por defecto: sin atributo o data-theme="light")
+   Base slate-blue premium; el partido es solo acento.
+   =========================================================================== */
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+  --bg-base: #F4F6FA;
+  --bg-base-2: #E9EEF5;
+  --bg-glass: rgba(255, 255, 255, 0.70);
+  --bg-glass-strong: rgba(255, 255, 255, 0.86);
+  --bg-card: #FFFFFF;
+  --bg-elevated: #FFFFFF;
+  --bg-sunken: #ECF0F6;
+  --bg-hover: rgba(30, 41, 59, 0.045);
+
+  --text-primary: #0E1726;
+  --text-secondary: #4A5567;
+  --text-tertiary: #8893A4;
+  --text-on-primary: #FFFFFF;
+
+  --border-subtle: rgba(30, 41, 59, 0.08);
+  --border-strong: rgba(30, 41, 59, 0.14);
+  --glass-edge: rgba(255, 255, 255, 0.7);
+  --glass-hairline: rgba(30, 41, 59, 0.06);
+
+  --shadow-soft:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 12px rgba(16, 24, 40, 0.06),
+    0 16px 32px rgba(16, 24, 40, 0.04);
+  --shadow-medium:
+    0 2px 4px rgba(16, 24, 40, 0.06),
+    0 8px 20px rgba(16, 24, 40, 0.08),
+    0 24px 48px rgba(16, 24, 40, 0.06);
+  --shadow-strong:
+    0 4px 8px rgba(16, 24, 40, 0.08),
+    0 16px 32px rgba(16, 24, 40, 0.12),
+    0 32px 64px rgba(16, 24, 40, 0.08);
+  --glass-inner: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --grid-line: rgba(30, 41, 59, 0.04);
+  --slate-accent: #5B6B86;
+}
+
+/* ===========================================================================
+   NEUTRALES — DARK
+   =========================================================================== */
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg-base: #0A0E16;
+  --bg-base-2: #0E131D;
+  --bg-glass: rgba(20, 26, 38, 0.64);
+  --bg-glass-strong: rgba(24, 31, 45, 0.86);
+  --bg-card: #141A26;
+  --bg-elevated: #1A2231;
+  --bg-sunken: #0C111B;
+  --bg-hover: rgba(255, 255, 255, 0.05);
+
+  --text-primary: #EEF2F8;
+  --text-secondary: #97A3B6;
+  --text-tertiary: #5C6779;
+  --text-on-primary: #FFFFFF;
+
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.15);
+  --glass-edge: rgba(255, 255, 255, 0.14);
+  --glass-hairline: rgba(255, 255, 255, 0.07);
+
+  --shadow-soft:
+    0 1px 3px rgba(0, 0, 0, 0.3),
+    0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-medium:
+    0 2px 6px rgba(0, 0, 0, 0.4),
+    0 12px 28px rgba(0, 0, 0, 0.5);
+  --shadow-strong:
+    0 8px 20px rgba(0, 0, 0, 0.5),
+    0 28px 60px rgba(0, 0, 0, 0.6);
+  --glass-inner: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --grid-line: rgba(255, 255, 255, 0.025);
+  --slate-accent: #8A99B2;
+}
+
+/* ===========================================================================
+   PARTY THEMES — multi-tenant. Set en <html data-party="...">.
+   El primary es independiente del tema; los neutrales light/dark van encima.
+   Nota: ThemeProvider tambien setea estos --polaris-primary* inline por
+   cliente, lo que gana en cascada sobre estos defaults por atributo.
+   =========================================================================== */
+[data-party='pan'] {
   --polaris-primary: #0066CC;
   --polaris-primary-dark: #003D7A;
-  --polaris-primary-light: #3D8BDB;
+  --polaris-primary-light: #4D94DB;
   --polaris-accent: #F4A53A;
-  --polaris-bg: #FFFFFF;
-  --polaris-surface-elevated: #F8F9FB;
-  --polaris-text: #0A0A0A;
-  --polaris-text-muted: #525252;
-  --polaris-text-subtle: #A3A3A3;
-  --polaris-border: #E5E5E5;
-  --polaris-sentiment-positive: #16A34A;
-  --polaris-sentiment-neutral: #737373;
-  --polaris-sentiment-negative: #DC2626;
-  --polaris-sentiment-mixed: #CA8A04;
+  --party-name: 'PAN';
+  --gradient-hero: linear-gradient(135deg, #003D7A 0%, #0066CC 50%, #4D94DB 100%);
+}
+[data-party='morena'] {
+  --polaris-primary: #8B2332;
+  --polaris-primary-dark: #5C0A14;
+  --polaris-primary-light: #B33A48;
+  --polaris-accent: #C9A961;
+  --party-name: 'MORENA';
+  --gradient-hero: linear-gradient(135deg, #5C0A14 0%, #8B2332 50%, #B33A48 100%);
+}
+[data-party='pri'] {
+  --polaris-primary: #006847;
+  --polaris-primary-dark: #004D34;
+  --polaris-primary-light: #1A8C66;
+  --polaris-accent: #CE1126;
+  --party-name: 'PRI';
+  --gradient-hero: linear-gradient(135deg, #004D34 0%, #006847 50%, #1A8C66 100%);
+}
+[data-party='mc'] {
+  --polaris-primary: #FF6F00;
+  --polaris-primary-dark: #C75500;
+  --polaris-primary-light: #FF9E40;
+  --polaris-accent: #424242;
+  --party-name: 'MC';
+  --gradient-hero: linear-gradient(135deg, #C75500 0%, #FF6F00 50%, #FF9E40 100%);
+}
+[data-party='pvem'] {
+  --polaris-primary: #2E7D32;
+  --polaris-primary-dark: #1B5E20;
+  --polaris-primary-light: #66BB6A;
+  --polaris-accent: #FDD835;
+  --party-name: 'PVEM';
+  --gradient-hero: linear-gradient(135deg, #1B5E20 0%, #2E7D32 50%, #66BB6A 100%);
+}
+[data-party='pt'] {
+  --polaris-primary: #D32F2F;
+  --polaris-primary-dark: #9A0007;
+  --polaris-primary-light: #FF6659;
+  --polaris-accent: #FBC02D;
+  --party-name: 'PT';
+  --gradient-hero: linear-gradient(135deg, #9A0007 0%, #D32F2F 50%, #FF6659 100%);
+}
+/* PRD — amarillo: forzar texto oscuro sobre primario (contraste WCAG AA). */
+[data-party='prd'] {
+  --polaris-primary: #F2A900;
+  --polaris-primary-dark: #C18600;
+  --polaris-primary-light: #FFD64D;
+  --polaris-accent: #1A1A1A;
+  --text-on-primary: #1A1A1A;
+  --party-name: 'PRD';
+  --gradient-hero: linear-gradient(135deg, #C18600 0%, #F2A900 50%, #FFD64D 100%);
+}
+/* Independiente / fallback */
+[data-party='ind'] {
+  --polaris-primary: #5E35B1;
+  --polaris-primary-dark: #4527A0;
+  --polaris-primary-light: #9575CD;
+  --polaris-accent: #FFB300;
+  --party-name: 'IND';
+  --gradient-hero: linear-gradient(135deg, #4527A0 0%, #5E35B1 50%, #9575CD 100%);
 }
 
-[data-theme="dark"] {
-  --polaris-bg: #0A0A0A;
-  --polaris-surface-elevated: #171717;
-  --polaris-text: #FAFAFA;
-  --polaris-text-muted: #A3A3A3;
-  --polaris-text-subtle: #525252;
-  --polaris-border: #262626;
+/* --- Tintes derivados (color-mix, no hardcodear) ------------------------ */
+:root {
+  --primary-soft: color-mix(in srgb, var(--polaris-primary) 12%, transparent);
+  --primary-softer: color-mix(in srgb, var(--polaris-primary) 7%, transparent);
+  --primary-ring: color-mix(in srgb, var(--polaris-primary) 28%, transparent);
+  --glow-primary: 0 0 0 1px color-mix(in srgb, var(--polaris-primary) 22%, transparent),
+                  0 0 44px color-mix(in srgb, var(--polaris-primary) 16%, transparent);
 }
 
-body {
-  background: var(--polaris-bg);
-  color: var(--polaris-text);
-  font-family: theme('fontFamily.sans');
+/* ===========================================================================
+   ALIAS LEGACY (--polaris-*) -> tokens v3.
+   Mantienen vivos los consumidores fuera de esta card (charts Recharts que
+   leen var(--polaris-bg / -border / -text-muted / -sentiment-x) y sentiment.ts).
+   Fuente de verdad: los tokens v3 de arriba. NO agregar logica aqui.
+   =========================================================================== */
+:root {
+  --polaris-bg: var(--bg-base);
+  --polaris-surface-elevated: var(--bg-card);
+  --polaris-text: var(--text-primary);
+  --polaris-text-muted: var(--text-secondary);
+  --polaris-text-subtle: var(--text-tertiary);
+  --polaris-border: var(--border-subtle);
+
+  /* sentiment legacy -> v3 (incluye los faltantes sarcastic + unknown) */
+  --polaris-sentiment-positive: var(--sent-positive);
+  --polaris-sentiment-negative: var(--sent-negative);
+  --polaris-sentiment-neutral: var(--sent-neutral);
+  --polaris-sentiment-mixed: var(--sent-mixed);
+  --polaris-sentiment-sarcastic: var(--sent-sarcastic);
+  --polaris-sentiment-unknown: var(--sent-unknown);
+
+  /* alias de texto extra usado por sentiment.ts (FALLBACK_COLOR) */
+  --text-2: var(--text-secondary);
+}
+
+/* ===========================================================================
+   BASE
+   =========================================================================== */
+@layer base {
+  html {
+    transition: background-color var(--theme-transition);
+  }
+  body {
+    font-family: var(--font-ui);
+    font-size: var(--text-base);
+    line-height: 1.6;
+    color: var(--text-primary);
+    background: var(--bg-base);
+    -webkit-font-smoothing: antialiased;
+    transition: color var(--theme-transition), background-color var(--theme-transition);
+  }
+
+  /* Animar los tokens de color de marca en el root para la transicion
+     multi-tenant (se activa con data-animate-theme). */
+  html[data-animate-theme] {
+    transition:
+      --polaris-primary var(--theme-transition),
+      --polaris-primary-dark var(--theme-transition),
+      --polaris-primary-light var(--theme-transition),
+      --polaris-accent var(--theme-transition);
+  }
+
+  .font-mono { font-family: var(--font-mono); font-feature-settings: 'tnum' 1; }
+  .tnum { font-variant-numeric: tabular-nums; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ===========================================================================
+   VIEW TRANSITION — cambio de cliente/partido (document.startViewTransition).
+   Cross-fade de toda la app (~420ms) al re-tintar. El theming engine
+   (ThemeProvider.setParty) envuelve la mutacion del DOM en startViewTransition.
+   =========================================================================== */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 420ms;
+  animation-timing-function: var(--ease-in-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}
+
+/* ===========================================================================
+   BACKGROUND base — fuera de @layer para ganar a reglas unlayered del entorno.
+   =========================================================================== */
+:root {
+  background-color: var(--bg-base);
+  transition: background-color var(--theme-transition);
+}
+
+/* ===========================================================================
+   RADAR MARK — simbolo POLARIS animado (T0.3).
+   El barrido gira en loop (3.8s linear), el blip parpadea (1.9s). El color
+   hereda --polaris-primary (currentColor) -> se auto-tinta por partido.
+   Respeta prefers-reduced-motion (animaciones off, queda el radar estatico).
+   =========================================================================== */
+.radar-ico {
+  color: var(--polaris-primary);
+  overflow: visible;
+}
+.radar-ico .sweep {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  animation: radar-sweep 3.8s linear infinite;
+}
+.radar-ico .blip {
+  transform-origin: center;
+  animation: star-twinkle 1.9s var(--ease-in-out) infinite;
+}
+
+@keyframes radar-sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes star-twinkle {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .radar-ico .sweep,
+  .radar-ico .blip {
+    animation: none !important;
+  }
+}
+
+/* ===========================================================================
+   APP SHELL — sidebar (252px) + main (1fr). Sidebar sticky en desktop,
+   drawer lateral en mobile (<=1024px). Topbar dentro de <main> (glass).
+   Pareado con AppShell.tsx. Tokens del design system v3.
+   =========================================================================== */
+.app-shell {
+  display: grid;
+  grid-template-columns: 252px 1fr;
+  min-height: 100vh;
+}
+.app-shell__main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- sidebar ---------- */
+.app-shell__sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 18px 14px;
+  border-right: 1px solid var(--border-subtle);
+  background: var(--bg-base-2);
+  z-index: 50;
+}
+.sb-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 10px 18px;
+}
+.sb-brand .nm {
+  font-weight: 800;
+  letter-spacing: var(--tracking-tight);
+  font-size: var(--text-md);
+  color: var(--text-primary);
+}
+.sb-brand .nm small {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  margin-top: -2px;
+}
+.sb-section {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  padding: 14px 12px 6px;
+}
+.app-shell__nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: var(--radius-xs);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background 0.16s,
+    color 0.16s;
+}
+.app-shell__nav-item svg {
+  width: 19px;
+  height: 19px;
+  flex: none;
+  opacity: 0.85;
+}
+.app-shell__nav-item .ind {
+  position: absolute;
+  left: -14px;
+  top: 50%;
+  transform: translateY(-50%) scaleY(0);
+  width: 3px;
+  height: 22px;
+  border-radius: 0 3px 3px 0;
+  background: var(--polaris-primary);
+  transition: transform 0.2s var(--ease-spring);
+}
+.app-shell__nav-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+.app-shell__nav-item:hover .ind {
+  transform: translateY(-50%) scaleY(0.6);
+}
+.app-shell__nav-item.is-active {
+  background: var(--primary-soft);
+  color: var(--polaris-primary);
+  font-weight: 600;
+}
+.app-shell__nav-item.is-active svg {
+  opacity: 1;
+}
+.app-shell__nav-item.is-active .ind {
+  transform: translateY(-50%) scaleY(1);
+}
+.app-shell__nav-item .pill {
+  margin-left: auto;
+}
+.sb-foot {
+  margin-top: auto;
+}
+
+/* ---------- topbar ---------- */
+.app-shell__topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 64px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-glass);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+}
+.tb-spacer {
+  flex: 1;
+}
+.tb-icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  transition: 0.18s;
+}
+.tb-icon:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+.sb-toggle {
+  display: none;
+}
+.app-shell__backdrop {
+  display: none;
+}
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: var(--text-xs);
+  color: #fff;
+  background: var(--gradient-hero);
+  flex: none;
+}
+
+/* client chip */
+.client-mini {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 8px 0 6px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: border-color 0.16s;
+}
+.client-mini:hover {
+  border-color: var(--border-strong);
+}
+.client-mini .who {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  text-align: left;
+}
+.client-mini .who b {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.client-mini .who span {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+.party-chip {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: var(--text-on-primary);
+  background: var(--polaris-primary);
+}
+
+/* quick party switch (vende el theming multi-tenant) */
+.party-switch {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+}
+.party-switch .lbl {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-right: 2px;
+}
+.party-switch .sw2 {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  transition: transform 0.16s var(--ease-spring);
+  cursor: pointer;
+}
+.party-switch .sw2[aria-pressed='true'] {
+  transform: scale(1.2);
+  box-shadow:
+    0 0 0 2px var(--bg-card),
+    0 0 0 4px currentColor;
+}
+
+@media (max-width: 1024px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+  .sb-toggle {
+    display: grid;
+  }
+  .app-shell__sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    height: auto;
+    width: 264px;
+    transform: translateX(-100%);
+    transition: transform 0.28s var(--ease-out);
+    z-index: 90;
+  }
+  .app-shell.is-nav-open .app-shell__sidebar {
+    transform: none;
+    box-shadow: var(--shadow-strong);
+  }
+  .app-shell__backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+    z-index: 85;
+  }
+  .app-shell.is-nav-open .app-shell__backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+/* ===========================================================================
+   DEMO BADGE — chip removible global. Pulso suave (respeta reduced-motion via
+   regla global de arriba). Tokens semanticos (warning).
+   =========================================================================== */
+.demo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #1a1208;
+  background: var(--warning);
+  border: 1px solid color-mix(in srgb, var(--warning) 70%, #000 12%);
 }

@@ -36,6 +36,13 @@ jobs:
           VITE_DEMO_USER_1: ${{ secrets.VITE_DEMO_USER_1 || 'andresorva' }}
           VITE_DEMO_USER_2: ${{ secrets.VITE_DEMO_USER_2 || 'luisphr' }}
           VITE_DEMO_PASSWORD: ${{ secrets.VITE_DEMO_PASSWORD || 'PolarisTest' }}
+          # Sentry DSN. initSentry() no-ops when this is empty (if (!dsn) return),
+          # so an unset secret is safe: the build succeeds and Sentry stays inert.
+          # Set the VITE_SENTRY_DSN repo Secret to activate error reporting.
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN || '' }}
+      # CNAME (polaris.datanaat.com) lives in public/ so Vite copies it verbatim
+      # into dist/, ensuring the custom domain travels in the Pages artifact.
+      # Without this, deploy-pages reset the domain on every run.
       # GitHub Pages has no SPA fallback: unknown paths 404. Serving a copy of
       # index.html as 404.html makes deep-links/refresh on app routes load the
       # SPA (standard GH Pages + BrowserRouter workaround).

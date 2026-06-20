@@ -7,6 +7,8 @@ export type BadgeVariant =
   | 'neutral'
   | 'negative'
   | 'mixed'
+  | 'sarcastic'
+  | 'unknown'
   | 'accent'
 
 type Props = HTMLAttributes<HTMLSpanElement> & {
@@ -14,12 +16,21 @@ type Props = HTMLAttributes<HTMLSpanElement> & {
   children: ReactNode
 }
 
+// Re-mapeado a tokens v3. sarcastic + unknown ahora existen (antes el token
+// faltaba y sarcastic caia al gris fallback).
 const variantClass: Record<BadgeVariant, string> = {
-  default: 'bg-surface-elevated text-ink border border-border',
-  positive: 'bg-sentiment-positive/15 text-sentiment-positive border border-sentiment-positive/30',
-  neutral: 'bg-sentiment-neutral/15 text-sentiment-neutral border border-sentiment-neutral/30',
-  negative: 'bg-sentiment-negative/15 text-sentiment-negative border border-sentiment-negative/30',
+  default: 'bg-card text-ink border border-border-subtle',
+  positive:
+    'bg-sentiment-positive/15 text-sentiment-positive border border-sentiment-positive/30',
+  neutral:
+    'bg-sentiment-neutral/15 text-sentiment-neutral border border-sentiment-neutral/30',
+  negative:
+    'bg-sentiment-negative/15 text-sentiment-negative border border-sentiment-negative/30',
   mixed: 'bg-sentiment-mixed/15 text-sentiment-mixed border border-sentiment-mixed/30',
+  sarcastic:
+    'bg-sentiment-sarcastic/15 text-sentiment-sarcastic border border-sentiment-sarcastic/30',
+  unknown:
+    'bg-sentiment-unknown/15 text-sentiment-unknown border border-sentiment-unknown/30',
   accent: 'bg-accent/15 text-accent border border-accent/30',
 }
 

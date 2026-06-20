@@ -6,6 +6,7 @@ import {
   FileText,
   LayoutDashboard,
   MessageSquare,
+  Settings,
   Users,
   type LucideIcon,
 } from 'lucide-react'
@@ -17,10 +18,18 @@ export type NavItem = {
   /** End-match: route is active only if exact (used for index route). */
   end?: boolean
   Icon: LucideIcon
-  /** Short label for bottom-tab MobileNav. */
+  /** Short label (compact contexts). */
   short?: string
-  /** Whether this item is featured in the 5-slot MobileNav primary row. */
-  mobilePrimary?: boolean
+  /**
+   * Muestra el badge de alertas (conteo) en el sidebar. El conteo real lo
+   * resuelve AppShell via useAlerts; aqui solo marca que item lo lleva.
+   */
+  alertBadge?: boolean
+  /**
+   * Item de pie de sidebar (Ajustes): se renderiza separado, abajo del todo
+   * (sb-foot), no en la lista principal de Monitoreo.
+   */
+  footer?: boolean
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -31,7 +40,6 @@ export const NAV_ITEMS: NavItem[] = [
     to: '/dashboard',
     end: true,
     Icon: LayoutDashboard,
-    mobilePrimary: true,
   },
   {
     id: 'pulso',
@@ -39,7 +47,6 @@ export const NAV_ITEMS: NavItem[] = [
     short: 'Pulso',
     to: '/dashboard/pulso',
     Icon: Activity,
-    mobilePrimary: true,
   },
   {
     id: 'sentiment',
@@ -47,7 +54,6 @@ export const NAV_ITEMS: NavItem[] = [
     short: 'Sentim.',
     to: '/dashboard/sentiment',
     Icon: BarChart3,
-    mobilePrimary: true,
   },
   {
     id: 'temas',
@@ -69,6 +75,7 @@ export const NAV_ITEMS: NavItem[] = [
     short: 'Alertas',
     to: '/dashboard/alertas',
     Icon: AlertTriangle,
+    alertBadge: true,
   },
   {
     id: 'briefing',
@@ -76,7 +83,6 @@ export const NAV_ITEMS: NavItem[] = [
     short: 'Brief',
     to: '/dashboard/briefing',
     Icon: FileText,
-    mobilePrimary: true,
   },
   {
     id: 'fuentes',
@@ -84,6 +90,15 @@ export const NAV_ITEMS: NavItem[] = [
     short: 'Fuentes',
     to: '/dashboard/fuentes',
     Icon: Database,
-    mobilePrimary: true,
   },
 ]
+
+/** Item de pie del sidebar: Ajustes (pantalla en wave siguiente). */
+export const FOOTER_NAV_ITEM: NavItem = {
+  id: 'ajustes',
+  label: 'Ajustes',
+  short: 'Ajustes',
+  to: '/dashboard/ajustes',
+  Icon: Settings,
+  footer: true,
+}
