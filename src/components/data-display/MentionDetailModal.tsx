@@ -272,7 +272,7 @@ export function MentionDetailModal({ mentionId, onClose }: Props) {
                   No pudimos cargar el detalle
                 </h3>
                 <p className="mt-1 text-sm text-ink-muted max-w-sm">
-                  El endpoint /mentions/{'{id}'} respondio con error. Reintenta.
+                  No se pudieron cargar los datos. Reintenta.
                 </p>
               </div>
               <Button

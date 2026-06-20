@@ -251,7 +251,7 @@ export function MentionsDataTable({
     return (
       <ErrorState
         title="No pudimos cargar las menciones"
-        description="El endpoint /mentions respondio con error. Reintenta."
+        description="No se pudieron cargar los datos. Reintenta."
         onRetry={onRetry}
         className={className}
       />

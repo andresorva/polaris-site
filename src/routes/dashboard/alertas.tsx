@@ -303,8 +303,8 @@ export function Alertas() {
           </div>
           <h1 className="mt-1 text-2xl font-bold text-ink">Crisis y alertas</h1>
           <p className="mt-1 max-w-2xl text-sm text-ink-muted">
-            Senales detectadas con z-score. Reacciona rapido: cada alerta trae
-            las menciones que la dispararon y recomendaciones accionables.
+            Detectamos cambios fuera de lo normal. Reacciona rapido: cada alerta
+            trae las menciones que la provocaron y que puedes hacer al respecto.
           </p>
         </div>
         <div
@@ -375,7 +375,7 @@ export function Alertas() {
       ) : alertsQ.isError ? (
         <ErrorState
           title="No pudimos cargar las alertas"
-          description="El endpoint /alerts respondio con error. Reintenta."
+          description="No se pudieron cargar las alertas. Reintenta."
           onRetry={() => alertsQ.refetch()}
         />
       ) : filtered.length === 0 ? (
@@ -388,7 +388,7 @@ export function Alertas() {
           }
           description={
             alerts.length === 0
-              ? 'El backend no tiene alertas activas ni historicas para este politico.'
+              ? 'Aun no hay alertas, ni activas ni anteriores, para este perfil.'
               : 'Ajusta severidad o estado para ver mas alertas.'
           }
         />
@@ -400,9 +400,8 @@ export function Alertas() {
           <div className="mb-3 flex items-center gap-2">
             <DemoBadge />
             <span className="text-[11px] text-ink-subtle">
-              El detalle de cada alerta (menciones, sentimiento del cluster,
-              recomendaciones) es ilustrativo hasta cablear los campos del
-              backend.
+              El detalle de cada alerta (menciones, sentimiento y
+              recomendaciones) es de ejemplo por ahora.
             </span>
           </div>
 

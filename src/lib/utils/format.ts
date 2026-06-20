@@ -75,8 +75,12 @@ export function formatDateTime(
 }
 
 /**
- * Relative-time strings ("hace 2 horas", "hace 3 días"). Falls back to absolute
+ * Relative-time strings ("hace 2 horas", "hace 3 dias"). Falls back to absolute
  * date for >30d (relative gets noisy at that scale).
+ *
+ * REGLA 79: built without Intl.RelativeTimeFormat (which emits accented /
+ * n-tilde output like "manana" / "hoy") so the produced strings are guaranteed
+ * ASCII — a e i o u n, no accents, no n-with-tilde.
  */
 export function formatRelativeTime(
   iso: string | null | undefined,
@@ -90,13 +94,25 @@ export function formatRelativeTime(
   const diffMs = d.getTime() - now.getTime()
   const diffSec = Math.round(diffMs / 1000)
   const absSec = Math.abs(diffSec)
+  const past = diffMs <= 0
 
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+  const phrase = (qty: number, singular: string, plural: string): string => {
+    const unit = qty === 1 ? singular : plural
+    return past ? `hace ${qty} ${unit}` : `en ${qty} ${unit}`
+  }
 
-  if (absSec < 60) return rtf.format(diffSec, 'second')
-  if (absSec < 3600) return rtf.format(Math.round(diffSec / 60), 'minute')
-  if (absSec < 86_400) return rtf.format(Math.round(diffSec / 3600), 'hour')
-  if (absSec < 86_400 * 30) return rtf.format(Math.round(diffSec / 86_400), 'day')
+  if (absSec < 60) {
+    return past ? 'hace un momento' : 'en un momento'
+  }
+  if (absSec < 3600) {
+    return phrase(Math.round(absSec / 60), 'minuto', 'minutos')
+  }
+  if (absSec < 86_400) {
+    return phrase(Math.round(absSec / 3600), 'hora', 'horas')
+  }
+  if (absSec < 86_400 * 30) {
+    return phrase(Math.round(absSec / 86_400), 'dia', 'dias')
+  }
   return formatDate(iso, locale)
 }
 

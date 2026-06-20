@@ -30,7 +30,7 @@ const LABEL_ES_MX: Record<SentimentLabel, string> = {
   negative: 'Negativo',
   neutral: 'Neutral',
   mixed: 'Mixto',
-  sarcastic: 'Sarcástico',
+  sarcastic: 'Sarcastico',
 }
 
 const LABEL_EN: Record<SentimentLabel, string> = {

@@ -312,7 +312,7 @@ export function Temas() {
     <div className="p-4 sm:p-6 space-y-6">
       <PageHeader
         title="Temas y narrativas"
-        subtitle="Taxonomia politica MX: 7 categorias, 30+ sub-temas locales. Donde otros ven solo politics, POLARIS distingue baches de alumbrado."
+        subtitle="7 grandes temas y mas de 30 asuntos locales. Donde otros solo ven politica, POLARIS distingue un bache de una falla de alumbrado."
       />
 
       {/* Fila superior: sunburst + lista de sub-temas (diferenciador) */}
@@ -364,7 +364,7 @@ export function Temas() {
             <EmptyState
               icon={<TrendingUp size={48} strokeWidth={1.5} />}
               title="Sin sub-temas en el periodo"
-              description="No hay menciones clasificadas en la taxonomia para los ultimos 90 dias."
+              description="No hay menciones organizadas por tema en los ultimos 90 dias."
             />
           ) : (
             <SubTopicsList
@@ -408,8 +408,8 @@ export function Temas() {
           <Card>
             <EmptyState
               icon={<Layers size={48} strokeWidth={1.5} />}
-              title="Sin categorias clasificadas"
-              description="El clasificador aun no ha etiquetado menciones en la taxonomia para esta ventana. Los conteos aparecen conforme el pipeline procesa contenido nuevo."
+              title="Sin categorias en este periodo"
+              description="Aun no hay menciones organizadas por tema en este periodo. Los conteos apareceran conforme se detecte contenido nuevo."
             />
           </Card>
         ) : (
@@ -437,8 +437,8 @@ export function Temas() {
             en vez de data sintetica (anti F-9 / F-11). */}
         <EmptyState
           icon={<Sparkles size={48} strokeWidth={1.5} />}
-          title="Pendiente pipeline NLP"
-          description="La deteccion de terminos emergentes (n-gram drift por ventana) requiere un endpoint dedicado que aun no expone el backend. Se habilita en un track posterior; sin data sintetica hasta entonces."
+          title="Proximamente"
+          description="Pronto podras ver las palabras nuevas que empiezan a sonar alrededor de ti. Esta seccion se habilitara mas adelante."
         />
       </Card>
     </div>

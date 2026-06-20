@@ -143,7 +143,7 @@ function streamReducer(state: StreamState, action: StreamAction): StreamState {
       return {
         ...initialStreamState,
         status: 'connecting',
-        progressMsg: 'Conectando al stream...',
+        progressMsg: 'Conectando...',
         startedAt: Date.now(),
       }
     case 'progress':
@@ -496,7 +496,7 @@ export function Pulso() {
                           typeof (data as { message?: unknown }).message ===
                             'string'
                         ? (data as { message: string }).message
-                        : 'Error en el stream',
+                        : 'No se pudo completar la busqueda en vivo.',
                 })
                 break
               default:
@@ -625,7 +625,7 @@ export function Pulso() {
 
       <PageHeader
         title="Pulso en vivo"
-        subtitle="Busqueda en tiempo real con stream SSE. Las menciones caen conforme se detectan y se clasifican on-the-fly por sentimiento."
+        subtitle="Busqueda en tiempo real: las menciones aparecen conforme se detectan y se clasifican al instante por sentimiento."
       />
 
       {/* ---- Search panel --------------------------------------------------- */}
@@ -756,7 +756,7 @@ export function Pulso() {
                 )}
                 aria-hidden="true"
               />
-              Live stream
+              En vivo
             </span>
             <span className="text-sm text-ink-subtle">
               -{' '}
@@ -832,11 +832,11 @@ export function Pulso() {
           {/* ---- Error state ---------------------------------------------- */}
           {stream.status === 'error' ? (
             <ErrorState
-              title="Conexion SSE interrumpida"
+              title="Conexion en vivo interrumpida"
               description={
                 stream.errorMsg
-                  ? `El stream se corto: ${stream.errorMsg}`
-                  : 'El stream se corto. Reintenta la busqueda.'
+                  ? `La busqueda en vivo se corto: ${stream.errorMsg}`
+                  : 'La busqueda en vivo se corto. Reintenta.'
               }
               onRetry={() => void runSearch(query)}
               retryLabel="Reintentar"
@@ -845,7 +845,7 @@ export function Pulso() {
             /* ---- Empty post-busqueda (0 mentions) ------------------------- */
             <EmptyState
               title="Sin menciones para este termino"
-              description="El stream no devolvio resultados para los filtros actuales. Prueba con otra palabra clave, mas plataformas o un rango mas amplio."
+              description="La busqueda en vivo no encontro resultados para los filtros actuales. Prueba con otra palabra clave, mas plataformas o un rango mas amplio."
               icon={<Radar size={48} strokeWidth={1.5} />}
             />
           ) : (
@@ -878,7 +878,7 @@ export function Pulso() {
                 </div>
               ) : (
                 <div className="py-6 text-center font-mono text-xs text-ink-subtle">
-                  Esperando menciones del stream...
+                  Esperando menciones en vivo...
                 </div>
               )}
             </div>
@@ -974,13 +974,9 @@ export function Pulso() {
       >
         <AlertCircle size={14} aria-hidden="true" className="mt-0.5 shrink-0" />
         <p>
-          El stream usa el contrato Wave 2 (campo{' '}
-          <code className="font-mono">query</code> + filtros{' '}
-          <code className="font-mono">platforms</code> /{' '}
-          <code className="font-mono">time_range</code>). Si el dispatch del
-          backend no esta cableado, el feed degrada a 0 menciones (estado vacio
-          honesto). La persistencia en DB de las menciones del stream sigue
-          pendiente (Wave B-1).
+          Busqueda en vivo: las menciones aparecen conforme se detectan. Si por
+          ahora no hay resultados, veras la lista vacia. Las menciones de la
+          busqueda en vivo todavia no se guardan para consultarlas mas tarde.
         </p>
       </div>
     </div>

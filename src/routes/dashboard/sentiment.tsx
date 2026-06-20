@@ -249,7 +249,7 @@ function MentionCard({
       </p>
       <div className="mt-2 flex items-center gap-3 text-[11px] text-ink-subtle">
         <span className="font-mono tabular-nums">
-          engagement {engagement.toLocaleString('en-US')}
+          interaccion {engagement.toLocaleString('en-US')}
         </span>
         {m.url ? (
           <a
@@ -396,9 +396,8 @@ export function Sentiment() {
             hint="ultimas 500 menc."
           />
           <p className="mt-2 px-1 text-[11px] italic text-ink-subtle">
-            Computado FE-side sobre las ultimas 500 menciones (filtrando
-            google_trends). No representativo de todo el historial: el backend no
-            expone un endpoint sentiment-by-platform agregado.
+            Calculado sobre las ultimas 500 menciones (sin Google Trends). Es una
+            muestra reciente, no el historial completo.
           </p>
         </div>
 
@@ -462,14 +461,14 @@ export function Sentiment() {
           ) : (
             <Card>
               <EmptyState
-                title="Sin senal en los buckets"
-                description="Los buckets de timeseries no tienen sentiment_breakdown poblado para este periodo. Pendiente Wave B fix B-15."
+                title="Aun no hay datos para este periodo"
+                description="Todavia no hay suficiente informacion para mostrar la evolucion del sentimiento en este periodo."
               />
             </Card>
           )}
           <p className="mt-2 px-1 text-[11px] italic text-ink-subtle">
-            Buckets diarios desde /timeseries (sentiment_breakdown por bucket).
-            La serie sarcastico aun no se expone por bucket en el backend.
+            Datos diarios del periodo. La serie de sarcasmo todavia no esta
+            disponible por dia.
           </p>
         </section>
 
@@ -477,7 +476,7 @@ export function Sentiment() {
           <div className="mb-2 flex items-center gap-2 px-1">
             <Hash size={16} className="text-ink-muted" aria-hidden="true" />
             <h2 className="text-sm font-semibold text-ink">
-              Drivers de sentimiento
+              Temas que mas influyen
             </h2>
           </div>
           <Card>
@@ -487,8 +486,8 @@ export function Sentiment() {
                 backend actual, por eso NO se monta data fake: empty-state honesto. */}
             <EmptyState
               icon={<TrendingUp size={48} strokeWidth={1.5} />}
-              title="Drivers pendientes (Wave B)"
-              description="Los topics que mas pesan en el sentimiento requieren clasificacion target-aware (Wave B-7) y el fix de ventana del orquestador (B-15). El backend aun no expone este agregado."
+              title="Aun no disponible"
+              description="Los temas que mas influyen en el sentimiento estaran disponibles proximamente."
             />
           </Card>
         </section>
@@ -509,8 +508,8 @@ export function Sentiment() {
             <DemoBadge className="ml-auto" />
           </div>
           <p className="mb-3 text-[11px] italic text-ink-subtle">
-            sentiment_label='positive' sobre 500 menciones recientes, ordenado
-            por engagement total.
+            Menciones positivas entre las 500 mas recientes, ordenadas por
+            interaccion total.
           </p>
           {mentionsQ.isLoading ? (
             <SkeletonTable rows={4} cols={1} />
@@ -520,7 +519,7 @@ export function Sentiment() {
             <EmptyState
               icon={<ThumbsUp size={48} strokeWidth={1.5} />}
               title="Sin menciones positivas"
-              description="Las 500 menciones recientes (filtrando google_trends) no incluyen ninguna marcada como positive."
+              description="Entre las 500 menciones recientes (sin Google Trends) no hay ninguna positiva."
             />
           ) : (
             <ul className="space-y-2.5">
@@ -552,8 +551,8 @@ export function Sentiment() {
             <DemoBadge className="ml-auto" />
           </div>
           <p className="mb-3 text-[11px] italic text-ink-subtle">
-            sentiment_label='negative' sobre 500 menciones recientes, ordenado
-            por engagement total.
+            Menciones negativas entre las 500 mas recientes, ordenadas por
+            interaccion total.
           </p>
           {mentionsQ.isLoading ? (
             <SkeletonTable rows={4} cols={1} />
@@ -563,7 +562,7 @@ export function Sentiment() {
             <EmptyState
               icon={<MessageSquare size={48} strokeWidth={1.5} />}
               title="Sin menciones negativas"
-              description="Las 500 menciones recientes (filtrando google_trends) no incluyen ninguna marcada como negative."
+              description="Entre las 500 menciones recientes (sin Google Trends) no hay ninguna negativa."
             />
           ) : (
             <ul className="space-y-2.5">

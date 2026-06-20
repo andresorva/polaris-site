@@ -222,8 +222,8 @@ export function Fuentes() {
       </div>
       <h1 className="mt-1 text-2xl font-semibold text-ink">Fuentes</h1>
       <p className="mt-1 max-w-2xl text-sm text-ink-muted">
-        Todas las menciones clasificadas. Densidad ajustable, orden por columna y
-        el detalle de los 9 agentes al hacer click en cualquier fila.
+        Todas las menciones clasificadas. Ajusta la densidad, ordena por columna y
+        abre el detalle completo al hacer clic en cualquier fila.
       </p>
     </header>
   )
@@ -244,7 +244,7 @@ export function Fuentes() {
         {head}
         <ErrorState
           title="No pudimos cargar las menciones"
-          description="El endpoint /mentions respondio con error. Reintenta."
+          description="No se pudieron cargar las menciones. Reintenta."
           onRetry={() => {
             for (const q of activeQueries) q.refetch()
           }}
@@ -333,14 +333,13 @@ export function Fuentes() {
               onChange={(e) => setExcludeGoogleTrends(e.target.checked)}
               className="h-3.5 w-3.5 accent-primary"
             />
-            Excluir google_trends
+            Excluir Google Trends
           </label>
           <div className="flex items-start gap-1.5 text-[11px] text-ink-subtle">
             <Info size={12} aria-hidden="true" className="mt-0.5 shrink-0" />
             <span>
-              Plataforma <code className="font-mono">google_trends</code> trae
-              contenido sintetico de Google Trends, no menciones reales. Excluida
-              por defecto.
+              Google Trends muestra temas de busqueda, no menciones reales. Se
+              excluye por defecto.
             </span>
           </div>
         </div>
@@ -391,7 +390,7 @@ export function Fuentes() {
       {allMentions.length === 0 ? (
         <EmptyState
           title="Sin menciones registradas"
-          description="El backend no devolvio menciones para este politico en el rango cargado."
+          description="Aun no hay menciones para este cliente en el periodo cargado."
         />
       ) : (
         <Card className="p-0">

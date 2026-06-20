@@ -611,7 +611,7 @@ export function DevComponentsPage() {
                 // error
               </span>
               <ErrorState
-                description={`Error de conexion al backend. Reintentos: ${retryCount}`}
+                description={`No se pudieron cargar los datos. Reintenta. Reintentos: ${retryCount}`}
                 onRetry={() => setRetryCount((c) => c + 1)}
               />
             </Card>

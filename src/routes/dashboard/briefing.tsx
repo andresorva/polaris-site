@@ -397,8 +397,8 @@ function BriefCalendar({
         {isDegraded ? (
           // API PENDIENTE: el endpoint available-dates no esta vivo todavia.
           <p className="mt-3 px-1 text-[11px] italic leading-snug text-ink-subtle">
-            Fechas disponibles desde verificacion local. La lista completa se
-            encendera cuando el backend exponga available-dates.
+            Mostrando las fechas con briefing que ya conocemos. La lista
+            completa se ira llenando con el tiempo.
           </p>
         ) : null}
       </div>
@@ -698,7 +698,7 @@ export function Briefing() {
       <PageHeader
         title="Briefing diario"
         subtitle={stripAccents(
-          `Resumen ejecutivo AI-generado cada manana, listo para leer o exportar a PDF. ${displayName}`,
+          `Resumen ejecutivo cada manana, listo para leer o descargar en PDF. ${displayName}`,
         )}
         actions={
           <ExportButton
@@ -731,9 +731,9 @@ export function Briefing() {
                 <EmptyState
                   title="Brief no generado para esta fecha aun"
                   description={stripAccents(
-                    `No existe daily brief para ${displayName} en ${formatBriefDateLong(
+                    `Aun no hay briefing para ${displayName} en ${formatBriefDateLong(
                       selectedDate,
-                    )}. Selecciona otra fecha en el calendario o espera el cron diario.`,
+                    )}. Selecciona otra fecha en el calendario o vuelve mas tarde.`,
                   )}
                 />
               </Card>
@@ -751,7 +751,7 @@ export function Briefing() {
             <Card>
               <EmptyState
                 title="Sin datos"
-                description="La respuesta del backend vino vacia."
+                description="Aun no hay briefing para esta fecha."
               />
             </Card>
           ) : (
