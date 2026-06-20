@@ -31,13 +31,11 @@ jobs:
           # Demo gate credentials. Vite inlines VITE_* at build time; if these
           # are absent the validator dead-code-eliminates to `return false` and
           # nobody can log in (the 2026-05-18 prod build shipped this bug).
-          # These come ONLY from repo Secrets — no cleartext fallback is
-          # versioned here. If a secret is unset the value is empty (login
-          # disabled), never the real credential. Set the GitHub repo Secrets
-          # VITE_DEMO_USER_1 / VITE_DEMO_USER_2 / VITE_DEMO_PASSWORD to enable.
-          VITE_DEMO_USER_1: ${{ secrets.VITE_DEMO_USER_1 }}
-          VITE_DEMO_USER_2: ${{ secrets.VITE_DEMO_USER_2 }}
-          VITE_DEMO_PASSWORD: ${{ secrets.VITE_DEMO_PASSWORD }}
+          # These are non-secret demo creds (already readable in the client
+          # bundle by design). Override via repo Secrets if desired.
+          VITE_DEMO_USER_1: ${{ secrets.VITE_DEMO_USER_1 || 'andresorva' }}
+          VITE_DEMO_USER_2: ${{ secrets.VITE_DEMO_USER_2 || 'luisphr' }}
+          VITE_DEMO_PASSWORD: ${{ secrets.VITE_DEMO_PASSWORD || 'PolarisTest' }}
           # Sentry DSN. initSentry() no-ops when this is empty (if (!dsn) return),
           # so an unset secret is safe: the build succeeds and Sentry stays inert.
           # Set the VITE_SENTRY_DSN repo Secret to activate error reporting.
