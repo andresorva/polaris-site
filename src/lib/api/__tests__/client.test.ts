@@ -9,7 +9,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, apiGet, apiPost } from '../client'
+import { ApiError, apiGet, apiPost, AUTH_TOKEN_KEY, getAuthToken } from '../client'
 
 const fetchMock = vi.fn()
 
@@ -111,5 +111,41 @@ describe('apiPost', () => {
     expect(init.body).toBe(JSON.stringify(body))
     const headers = init.headers as Record<string, string>
     expect(headers['Content-Type']).toBe('application/json')
+  })
+})
+
+describe('Authorization header (// API PENDIENTE auth real)', () => {
+  afterEach(() => {
+    localStorage.removeItem(AUTH_TOKEN_KEY)
+  })
+
+  it('omits Authorization when no token is stored', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, {}))
+    await apiGet('/x')
+    const headers = fetchMock.mock.calls[0]?.[1].headers as Record<string, string>
+    expect(headers.Authorization).toBeUndefined()
+  })
+
+  it('attaches Bearer header for a bare-string token', async () => {
+    localStorage.setItem(AUTH_TOKEN_KEY, 'abc.def.ghi')
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, {}))
+    await apiGet('/x')
+    const headers = fetchMock.mock.calls[0]?.[1].headers as Record<string, string>
+    expect(headers.Authorization).toBe('Bearer abc.def.ghi')
+  })
+
+  it('reads token from a JSON blob ({ token } or { access_token })', () => {
+    localStorage.setItem(AUTH_TOKEN_KEY, JSON.stringify({ token: 'tok1' }))
+    expect(getAuthToken()).toBe('tok1')
+    localStorage.setItem(
+      AUTH_TOKEN_KEY,
+      JSON.stringify({ access_token: 'tok2' }),
+    )
+    expect(getAuthToken()).toBe('tok2')
+  })
+
+  it('returns undefined for an empty/garbage stored value', () => {
+    localStorage.setItem(AUTH_TOKEN_KEY, JSON.stringify({ nope: true }))
+    expect(getAuthToken()).toBeUndefined()
   })
 })

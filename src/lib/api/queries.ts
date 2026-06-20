@@ -1,16 +1,32 @@
 /**
  * TanStack Query hooks for POLARIS API.
  *
- * Conventions:
- * - queryKey = [resource, ...identifiers, ...filterParams] so cache invalidation
- *   per politician + per filter combo is trivial.
+ * One hook per backend endpoint. Conventions:
+ * - queryKey = [resource, ...identifiers, ...filterParams] so cache
+ *   invalidation per politician + per filter combo is trivial.
  * - `enabled: !!id` guards prevent fetches when ids aren't ready (e.g. before
- *   route param resolves).
- * - Hooks accept optional filter params; default values mirror backend defaults.
+ *   a route param resolves).
+ * - Hooks accept optional filter params; defaults mirror backend defaults.
+ * - Read endpoints reuse the shared client (apiGet/apiPost). Auth + PATCH go
+ *   through authClient (Bearer header + PATCH method) WITHOUT touching the
+ *   shared client.ts.
+ *
+ * REGLA 79: ASCII only in any visible string (none live here; types only).
  */
 
-import { useQuery } from '@tanstack/react-query'
-import { apiGet, apiPost } from './client'
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
+import { apiGet } from './client'
+import {
+  apiAuthGet,
+  apiAuthPatch,
+  apiAuthPost,
+  clearToken,
+  setToken,
+} from './authClient'
 import { ENDPOINTS } from './endpoints'
 import type {
   Alert,
@@ -20,8 +36,6 @@ import type {
   DailyMetricsResponse,
   Freshness,
   Health,
-  LiveQueryRequest,
-  LiveQueryResponse,
   Mention,
   PPI,
   Politician,
@@ -29,10 +43,19 @@ import type {
   SentimentScope,
   Timeseries,
   TimeseriesInterval,
-  TopAuthorsResponse,
   TopAuthorsScope,
   TopicsResponse,
 } from './types'
+import type {
+  AlertPatchBody,
+  AvailableDatesResponse,
+  LoginRequest,
+  LoginResponse,
+  MentionDetail,
+  MeResponse,
+  TopAuthorsScoredResponse,
+  TopicsGroupedResponse,
+} from './extended-types'
 
 // ============================================================================
 // Politicians
@@ -54,7 +77,7 @@ export function usePolitician(id: string) {
 }
 
 // ============================================================================
-// Metrics
+// Metrics (PPI / timeseries / daily / hourly)
 // ============================================================================
 
 export function usePPI(politicianId: string) {
@@ -88,13 +111,28 @@ export function useTimeseries(politicianId: string, options: TimeseriesOptions =
   })
 }
 
-export function useDailyMetrics(politicianId: string, days = 30) {
+export function useMetricsDaily(politicianId: string, days = 30) {
   return useQuery({
     queryKey: ['metrics-daily', politicianId, days],
     queryFn: () =>
       apiGet<DailyMetricsResponse>(ENDPOINTS.metricsDaily, {
         politician_id: politicianId,
         days,
+      }),
+    enabled: !!politicianId,
+  })
+}
+
+/** Backwards-compatible alias kept for existing callers. */
+export const useDailyMetrics = useMetricsDaily
+
+export function useMetricsHourly(politicianId: string, hours = 24) {
+  return useQuery({
+    queryKey: ['metrics-hourly', politicianId, hours],
+    queryFn: () =>
+      apiGet<DailyMetricsResponse>(ENDPOINTS.metricsHourly, {
+        politician_id: politicianId,
+        hours,
       }),
     enabled: !!politicianId,
   })
@@ -131,12 +169,18 @@ interface TopAuthorsOptions {
   scope?: TopAuthorsScope
 }
 
+/**
+ * Top authors. Backend now returns `avg_sentiment_score` per author, so the
+ * response is typed as `TopAuthorsScoredResponse` (superset of the legacy
+ * `TopAuthorsResponse`). Default window is 90d to mirror the backend default
+ * (recurrent low-frequency voices need a wider window to surface).
+ */
 export function useTopAuthors(politicianId: string, options: TopAuthorsOptions = {}) {
-  const { limit = 10, days = 30, scope = 'third_party' } = options
+  const { limit = 10, days = 90, scope = 'third_party' } = options
   return useQuery({
     queryKey: ['top-authors', politicianId, limit, days, scope],
     queryFn: () =>
-      apiGet<TopAuthorsResponse>(ENDPOINTS.topAuthors(politicianId), {
+      apiGet<TopAuthorsScoredResponse>(ENDPOINTS.topAuthors(politicianId), {
         limit,
         days,
         scope,
@@ -146,7 +190,7 @@ export function useTopAuthors(politicianId: string, options: TopAuthorsOptions =
 }
 
 // ============================================================================
-// Mentions
+// Mentions (+ detail with 9-agent block)
 // ============================================================================
 
 interface MentionsOptions {
@@ -192,14 +236,27 @@ export function useMentions(politicianId: string, options: MentionsOptions = {})
   })
 }
 
+/**
+ * Detail for one mention -> MentionDetailModal (9 agentes). Returns the flat
+ * mention row plus a nested `agents` block (shape CONGELADO en backend).
+ */
+export function useMentionDetail(mentionId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['mention', mentionId],
+    queryFn: () => apiGet<MentionDetail>(ENDPOINTS.mentionById(mentionId as string)),
+    enabled: !!mentionId,
+  })
+}
+
 // ============================================================================
-// Topics / Freshness / Daily brief
+// Topics (legacy flat list + grouped sunburst)
 // ============================================================================
 
 interface TopicsOptions {
   days?: number
 }
 
+/** Legacy flat topic list {topic, count, sentiment_avg, trend}. */
 export function useTopics(politicianId: string, options: TopicsOptions = {}) {
   const { days = 7 } = options
   return useQuery({
@@ -209,15 +266,40 @@ export function useTopics(politicianId: string, options: TopicsOptions = {}) {
   })
 }
 
+/**
+ * Grouped topics for the taxonomy sunburst: rows of
+ * {categoria, sub, count, pct_neg, in_taxonomy}. Sends grouped=true.
+ */
+export function useTopicsGrouped(politicianId: string, options: TopicsOptions = {}) {
+  const { days = 90 } = options
+  return useQuery({
+    queryKey: ['topics-grouped', politicianId, days],
+    queryFn: () =>
+      apiGet<TopicsGroupedResponse>(ENDPOINTS.topics(politicianId), {
+        days,
+        grouped: true,
+      }),
+    enabled: !!politicianId,
+  })
+}
+
+// ============================================================================
+// Freshness
+// ============================================================================
+
 export function useFreshness(politicianId: string) {
   return useQuery({
     queryKey: ['freshness', politicianId],
     queryFn: () => apiGet<Freshness>(ENDPOINTS.freshness(politicianId)),
     enabled: !!politicianId,
-    // Freshness is most useful when "current" — refresh more aggressively.
+    // Freshness is most useful when "current" -> refresh more aggressively.
     staleTime: 60 * 1000,
   })
 }
+
+// ============================================================================
+// Daily brief (+ available dates for the calendar)
+// ============================================================================
 
 export function useDailyBrief(politicianId: string, date?: string) {
   return useQuery({
@@ -226,6 +308,22 @@ export function useDailyBrief(politicianId: string, date?: string) {
       apiGet<DailyBrief>(
         ENDPOINTS.dailyBrief(politicianId),
         date ? { date } : undefined,
+      ),
+    enabled: !!politicianId,
+  })
+}
+
+/**
+ * Dates that have a generated brief -> lights up the Briefing calendar.
+ * API PENDIENTE: endpoint not yet live in backend (Wave 2 exposes it). The
+ * builder + hook are wired so the screen flips on with zero changes.
+ */
+export function useAvailableDates(politicianId: string) {
+  return useQuery({
+    queryKey: ['daily-brief-available-dates', politicianId],
+    queryFn: () =>
+      apiGet<AvailableDatesResponse>(
+        ENDPOINTS.dailyBriefAvailableDates(politicianId),
       ),
     enabled: !!politicianId,
   })
@@ -266,7 +364,7 @@ export function useCoordinationGroups(
 }
 
 // ============================================================================
-// Alerts
+// Alerts (list + PATCH mutation)
 // ============================================================================
 
 export function useAlerts(politicianId: string) {
@@ -275,6 +373,93 @@ export function useAlerts(politicianId: string) {
     queryFn: () =>
       apiGet<Alert[]>(ENDPOINTS.alerts, { politician_id: politicianId }),
     enabled: !!politicianId,
+  })
+}
+
+interface AlertPatchVars {
+  id: string
+  body: AlertPatchBody
+  /** Optional: politicianId to scope cache invalidation. */
+  politicianId?: string
+}
+
+/**
+ * PATCH /alerts/{id} -> Crisis actions (Responder / Escalar / Marcar atendida).
+ * On success invalidates the alerts list so the feed + sidebar badge refresh.
+ */
+export function useAlertPatch() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, body }: AlertPatchVars) =>
+      apiAuthPatch<Alert, AlertPatchBody>(ENDPOINTS.alertById(id), body),
+    onSuccess: (_data, vars) => {
+      if (vars.politicianId) {
+        qc.invalidateQueries({ queryKey: ['alerts', vars.politicianId] })
+      } else {
+        qc.invalidateQueries({ queryKey: ['alerts'] })
+      }
+    },
+  })
+}
+
+// ============================================================================
+// Auth (login / me / logout)
+// ============================================================================
+
+/**
+ * POST /auth/login -> stores the access token (for the Bearer header) and
+ * returns the login payload. Token persistence lives in authClient.
+ */
+export function useLogin() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (creds: LoginRequest) =>
+      // Login itself does not need a prior token.
+      apiAuthPost<LoginResponse, LoginRequest>(ENDPOINTS.authLogin, creds, undefined, false),
+    onSuccess: (data) => {
+      if (data?.access_token) setToken(data.access_token)
+      qc.invalidateQueries({ queryKey: ['auth', 'me'] })
+    },
+  })
+}
+
+/**
+ * GET /auth/me -> the user behind the current Bearer token. `enabled` defaults
+ * to true; pass `false` to skip (e.g. on the login screen before a token
+ * exists). 401/expired -> ApiError, which the consumer can treat as logged-out.
+ */
+export function useMe(enabled = true) {
+  return useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: () => apiAuthGet<MeResponse>(ENDPOINTS.authMe),
+    enabled,
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+/**
+ * POST /logout -> clears the local token then notifies the backend
+ * (idempotent server-side). Resets the cached `auth/me`.
+ */
+export function useLogout() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      try {
+        await apiAuthPost<{ ok: boolean; message: string }, Record<string, never>>(
+          ENDPOINTS.authLogout,
+          {},
+        )
+      } finally {
+        // Always drop the local token even if the network call fails.
+        clearToken()
+      }
+    },
+    onSuccess: () => {
+      qc.setQueryData(['auth', 'me'], undefined)
+      qc.invalidateQueries({ queryKey: ['auth', 'me'] })
+    },
   })
 }
 
@@ -288,16 +473,4 @@ export function useHealth() {
     queryFn: () => apiGet<Health>(ENDPOINTS.health),
     staleTime: 30 * 1000,
   })
-}
-
-// ============================================================================
-// Live Query (POST)
-// ============================================================================
-
-/**
- * Trigger function for Live Query — not a hook because mutations are imperative.
- * Wire to `useMutation` in consumer if optimistic UI / loading states needed.
- */
-export function liveQuery(body: LiveQueryRequest): Promise<LiveQueryResponse> {
-  return apiPost<LiveQueryResponse, LiveQueryRequest>(ENDPOINTS.liveQuery, body)
 }

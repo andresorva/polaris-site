@@ -5,6 +5,7 @@ export type CardProps = HTMLAttributes<HTMLDivElement> & {
   padded?: boolean
 }
 
+// Re-mapeado a tokens v3: superficie de card + borde sutil + radio md + sombra soft.
 export const Card = forwardRef<HTMLDivElement, CardProps>(function Card(
   { className, padded = true, ...rest },
   ref,
@@ -13,8 +14,8 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(function Card(
     <div
       ref={ref}
       className={cn(
-        'bg-surface-elevated border border-border rounded-lg',
-        padded && 'p-4',
+        'bg-card border border-border-subtle rounded-md shadow-soft',
+        padded && 'p-5',
         className,
       )}
       {...rest}

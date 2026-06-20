@@ -3,9 +3,22 @@
  *
  * Why a custom parser instead of `EventSource`:
  *   - `EventSource` is GET-only — POLARIS `/api/v1/live-query` is POST with a
- *     JSON body (query + filters).
+ *     JSON body. New contract body shape: `{ query }` (renamed from
+ *     `question`) plus optional `platforms` / `time_range` filters — see
+ *     `PulsoLiveQueryRequest`.
  *   - We parse the `text/event-stream` format ourselves from `fetch().body`
  *     (a `ReadableStream<Uint8Array>`).
+ *
+ * Pulso `mention` events:
+ *   The backend emits `event: mention` with a compact payload
+ *   `{ plat, author, text, score, sent, eng, timestamp, url }`. Use
+ *   `normalizePulsoMention()` to map that wire shape to the canonical
+ *   `Mention` type the UI renders. `streamPost` stays generic — it just hands
+ *   the parsed `data` to `onEvent`; callers decide whether to normalize.
+ *
+ * Auth:
+ *   `streamPost` attaches `Authorization: Bearer <token>` when a session token
+ *   is present in storage (// API PENDIENTE auth real). Anonymous otherwise.
  *
  * SSE format reminder (per WHATWG):
  *   event: foo\n
@@ -36,6 +49,9 @@
  *     error or abort).
  */
 
+import { getAuthToken } from './client'
+import type { Mention, Platform, SentimentLabel } from './types'
+
 export type SseEvent = {
   event: string
   data: unknown
@@ -50,6 +66,155 @@ export type SseHandlers = {
 }
 
 const DEFAULT_EVENT_NAME = 'message'
+
+// ============================================================================
+// Pulso live-query contract (POST /api/v1/live-query)
+// ============================================================================
+
+/**
+ * Request body for the Pulso live-query stream.
+ *
+ * Contract change: the field is now `query` (was `question`). `platforms` and
+ * `time_range` are optional server-side filters. Kept open (`[key: string]`)
+ * so callers can pass extra context without a type bump.
+ */
+export interface PulsoLiveQueryRequest {
+  query: string
+  politician_id?: string
+  platforms?: string[]
+  time_range?: string
+  [key: string]: unknown
+}
+
+/**
+ * Wire shape of a single `mention` SSE event from the backend.
+ *
+ * The backend emits a compact shape per the design-v3 Pulso spec:
+ *   { plat, author, text, score, sent, eng, timestamp, url }
+ * where:
+ *   - `plat`      platform slug (twitter | bluesky | youtube | news | ...)
+ *   - `author`    handle/name string
+ *   - `text`      mention body
+ *   - `score`     sentiment score in [-1, 1]
+ *   - `sent`      short label: 'pos' | 'neg' | 'neu' | 'mix' | 'sar'
+ *   - `eng`       [likes/reactions, reposts/shares, comments] tuple
+ *   - `timestamp` ISO string (publication / collection time)
+ *   - `url`       source URL
+ * All fields are optional on the wire — the backend may omit any of them, and
+ * `normalizePulsoMention` fills sane fallbacks.
+ */
+export interface PulsoMentionWire {
+  plat?: string
+  author?: string | null
+  text?: string
+  score?: number | null
+  sent?: string | null
+  eng?: number[] | null
+  timestamp?: string | null
+  url?: string | null
+  // The backend may also attach an explicit id; if not we synthesize one.
+  id?: string
+}
+
+const SHORT_SENT_TO_LABEL: Record<string, SentimentLabel> = {
+  pos: 'positive',
+  positive: 'positive',
+  neg: 'negative',
+  negative: 'negative',
+  neu: 'neutral',
+  neutral: 'neutral',
+  mix: 'mixed',
+  mixed: 'mixed',
+  sar: 'sarcastic',
+  sarcastic: 'sarcastic',
+}
+
+/**
+ * Maps the short `sent` wire code (`'neg'`, `'pos'`, ...) to the canonical
+ * `SentimentLabel`. Returns null for unknown/absent codes.
+ */
+export function shortSentToLabel(
+  sent: string | null | undefined,
+): SentimentLabel | null {
+  if (!sent) return null
+  return SHORT_SENT_TO_LABEL[sent.toLowerCase()] ?? null
+}
+
+/**
+ * Type guard: does this value look like a Pulso wire mention (new contract)?
+ * Recognized by the presence of any of the compact fields. Used to disambiguate
+ * from the already-normalized `Mention` shape (which uses `platform`/`content`).
+ */
+export function isPulsoMentionWire(value: unknown): value is PulsoMentionWire {
+  if (typeof value !== 'object' || value === null) return false
+  const v = value as Record<string, unknown>
+  return (
+    'plat' in v ||
+    'text' in v ||
+    'sent' in v ||
+    'eng' in v
+  )
+}
+
+let pulsoMentionSeq = 0
+
+/**
+ * Normalizes a `PulsoMentionWire` into the canonical `Mention` type the UI
+ * already renders. This keeps the SSE wire contract decoupled from the rich
+ * `Mention` shape used everywhere else, so consumers (e.g. the Pulso page) can
+ * push the result straight into their existing mention list.
+ *
+ * Notes:
+ *   - `id`: uses the backend id when present, else synthesizes a stable-enough
+ *     id from url+timestamp (falls back to a monotonic counter) so the consumer
+ *     dedupe-by-id logic keeps working.
+ *   - `engagement_metrics`: maps the `eng` tuple to a labeled record.
+ *   - `politician_id`: optional context the caller may inject afterward; left as
+ *     '' here since the wire event does not carry it.
+ */
+export function normalizePulsoMention(
+  wire: PulsoMentionWire,
+  ctx?: { politicianId?: string },
+): Mention {
+  const eng = Array.isArray(wire.eng) ? wire.eng : []
+  const [likes, reposts, comments] = eng
+  const engagement_metrics: Record<string, number> = {}
+  if (typeof likes === 'number') engagement_metrics.likes = likes
+  if (typeof reposts === 'number') engagement_metrics.reposts = reposts
+  if (typeof comments === 'number') engagement_metrics.comments = comments
+
+  const timestamp =
+    typeof wire.timestamp === 'string' && wire.timestamp.length > 0
+      ? wire.timestamp
+      : new Date().toISOString()
+
+  const id =
+    typeof wire.id === 'string' && wire.id.length > 0
+      ? wire.id
+      : `pulso_${wire.url ?? ''}_${timestamp}_${++pulsoMentionSeq}`
+
+  return {
+    id,
+    politician_id: ctx?.politicianId ?? '',
+    platform: (wire.plat ?? 'unknown') as Platform,
+    external_id: id,
+    parent_external_id: null,
+    title: null,
+    content: typeof wire.text === 'string' ? wire.text : '',
+    url: typeof wire.url === 'string' ? wire.url : '',
+    author: wire.author ?? null,
+    author_handle: wire.author ?? null,
+    sentiment_score: typeof wire.score === 'number' ? wire.score : null,
+    sentiment_label: shortSentToLabel(wire.sent),
+    engagement_metrics,
+    language: 'es',
+    collected_at: timestamp,
+    published_at: timestamp,
+    topic_categories: null,
+    is_own_content: false,
+    is_crisis: null,
+  }
+}
 
 /**
  * Parse one fully-buffered SSE event block (the text between two `\n\n`).
@@ -135,12 +300,16 @@ export async function streamPost(
   try {
     let res: Response
     try {
+      // // API PENDIENTE auth real — attach Bearer when a session token exists.
+      const token = getAuthToken()
+      const headers: Record<string, string> = {
+        Accept: 'text/event-stream',
+        'Content-Type': 'application/json',
+      }
+      if (token) headers.Authorization = `Bearer ${token}`
       res = await fetch(url, {
         method: 'POST',
-        headers: {
-          Accept: 'text/event-stream',
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(body),
         signal,
       })

@@ -114,7 +114,7 @@ export function DevComponentsPage() {
             <div className="font-mono text-sm tracking-tight">
               POLARIS · /dev/components
             </div>
-            <DemoBadge />
+            <DemoBadge always />
           </div>
 
           <div className="flex items-center gap-3">
@@ -312,7 +312,7 @@ export function DevComponentsPage() {
             </Card>
             <Card padded={false}>
               <div className="p-6 flex items-center gap-3">
-                <DemoBadge />
+                <DemoBadge always />
                 <span className="text-sm text-ink-muted">
                   Marca prominente para data mock / placeholder.
                 </span>

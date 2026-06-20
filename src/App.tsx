@@ -7,9 +7,7 @@ import { queryClient } from './lib/api/queryClient'
 
 const LoginPage = lazy(() => import('./routes/login'))
 const DevComponentsPage = lazy(() => import('./routes/dev/components'))
-const DashboardLayout = lazy(
-  () => import('./components/layout/DashboardLayout'),
-)
+const AppShell = lazy(() => import('./components/layout/AppShell'))
 const VistaGeneral = lazy(() => import('./routes/dashboard/index'))
 const Pulso = lazy(() => import('./routes/dashboard/pulso'))
 const Sentiment = lazy(() => import('./routes/dashboard/sentiment'))
@@ -18,6 +16,8 @@ const Voces = lazy(() => import('./routes/dashboard/voces'))
 const Alertas = lazy(() => import('./routes/dashboard/alertas'))
 const Briefing = lazy(() => import('./routes/dashboard/briefing'))
 const Fuentes = lazy(() => import('./routes/dashboard/fuentes'))
+const Ajustes = lazy(() => import('./routes/dashboard/ajustes'))
+const Showcase = lazy(() => import('./routes/dashboard/showcase'))
 const NotFound = lazy(() => import('./routes/not-found'))
 
 function PageFallback() {
@@ -46,7 +46,7 @@ function App() {
                 path="/dashboard"
                 element={
                   <RequireAuth>
-                    <DashboardLayout />
+                    <AppShell />
                   </RequireAuth>
                 }
               >
@@ -58,6 +58,8 @@ function App() {
                 <Route path="alertas" element={<Alertas />} />
                 <Route path="briefing" element={<Briefing />} />
                 <Route path="fuentes" element={<Fuentes />} />
+                <Route path="ajustes" element={<Ajustes />} />
+                <Route path="showcase" element={<Showcase />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
