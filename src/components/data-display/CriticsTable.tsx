@@ -13,23 +13,11 @@ import { useMemo, useState } from 'react'
 import { AlertTriangle, ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
 import type { TopAuthor } from '../../lib/api/types'
 import { cn } from '../../lib/utils/cn'
+import { isSyntheticAuthor } from '../../lib/utils/synthetic'
 import { PlatformChip } from './PlatformChip'
 import { EmptyState } from '../states/EmptyState'
 import { ErrorState } from '../states/ErrorState'
 import { SkeletonTable } from '../states/LoadingSkeleton'
-
-// ---------------------------------------------------------------------------
-// Synthetic-author exclusion - google_trends + author 'MX' are pipeline noise,
-// never real voices. Mirror the audit rule used across the Voces screen.
-// ---------------------------------------------------------------------------
-
-export function isSyntheticAuthor(a: TopAuthor): boolean {
-  if (!a.author || a.author === 'MX') return true
-  if ((a.platforms ?? []).every((p) => p === 'google_trends')) {
-    return (a.platforms ?? []).length > 0
-  }
-  return false
-}
 
 // ---------------------------------------------------------------------------
 // Sort

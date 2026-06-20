@@ -226,8 +226,9 @@ export function LoginPage() {
 
   // Limpia cualquier timer pendiente al desmontar.
   useEffect(() => {
+    const timers = timersRef.current
     return () => {
-      timersRef.current.forEach((t) => window.clearTimeout(t))
+      timers.forEach((t) => window.clearTimeout(t))
     }
   }, [])
 
