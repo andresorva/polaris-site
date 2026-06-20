@@ -71,8 +71,8 @@ function buildCsv<Row>(rows: Row[], columns: CsvColumn<Row>[]): string {
 }
 
 function downloadCsv(filename: string, csv: string): void {
-  // BOM para que Excel respete UTF-8.
-  const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8;' })
+  // BOM (escape \uFEFF) para que Excel respete UTF-8 al abrir el CSV.
+  const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
